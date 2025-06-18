@@ -160,4 +160,29 @@ await w.set("example-key", "example-value")
 
 - All required files for an element (worker, test, util, etc.) must be present and up to date after any add or update prompt.
 
----
+# Tests
+
+All tests must follow the Bun test framework conventions.
+
+example test file:
+
+```typescript
+import { describe, it, expect } from "bun:test"
+import ProcessWorker from "../src/ProcessWorker"
+
+describe("Test listen", () => {
+  it("should start a worker and listen to a stream", async () => {
+    const worker1 = await ProcessWorker.start("worker-1")
+    const worker2 = await ProcessWorker.start("worker-2")
+    const got = []
+    worker1.listen("test-stream", msg => {
+      got.push(msg)
+    })
+    worker2.post("test-stream", { type: "test", data: "Hello, World!" })
+    await new Promise(resolve => setTimeout(resolve, 100)) // wait for message to be processed
+    expect(got).toEqual([{ type: "test", data: "Hello, World!" }])
+    worker1.stop()
+    worker2.stop()
+  })
+})
+```

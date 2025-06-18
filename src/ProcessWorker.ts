@@ -1,9 +1,16 @@
-import { createClient } from "redis"
+import { createClient, type RedisArgument, type RedisClientType } from "redis"
 
 /**
  * Options for configuring a ProcessWorker instance.
  */
 export interface ProcessWorkerOptions {
+  /**
+   * Optional prefix for the Redis keys used by the worker.
+   * This can be useful for namespacing keys in a shared Redis instance.
+   * Default is undefined, meaning no prefix will be used.
+   */
+  prefix?: string
+
   /**
    * The name of the worker, used for logging and identification.
    */
@@ -46,8 +53,8 @@ export class ProcessWorker {
   postStatusLogInterval: number
   statusData: (() => Record<string, any>) | Record<string, any> | undefined
   private workerName: string
-  private redis: any // Redis client for interacting with the global cache and logging streams
-  private subscriber: any // Redis subscriber for listening to streams
+  private redis: RedisClientType | undefined // Redis client for interacting with the global cache and logging streams
+  private subscriber: RedisClientType | undefined // Redis subscriber for listening to streams
   private workerSessionId: string
   private _started = false
   /**
@@ -126,7 +133,7 @@ export class ProcessWorker {
    * @param redisStreamId The Redis stream ID (default: "*").
    * @returns The stream ID of the posted message.
    */
-  async post<T = any>(
+  async post<T extends Record<string, RedisArgument> >(
     type: string,
     data: T,
     redisStreamId: string = "*"
@@ -134,7 +141,9 @@ export class ProcessWorker {
     if (!this._started) {
       new Error("Worker not started")
     }
-    const streamId = await this.redis.xAdd(`requests:${type}`, redisStreamId, data)
+    console.log(`Posting to stream: ${type} with ID: ${redisStreamId}`, data)
+    const streamId = await this.redis?.xAdd(`${type}`, redisStreamId, data)
+    console.log(`Posted to stream: ${type} with ID: ${streamId}`, data)
     return streamId
   }
 
@@ -150,7 +159,7 @@ export class ProcessWorker {
     defaultValue?: T
   ): Promise<T| undefined> {
     if (!this._started) throw new Error("Worker not started")
-    let value = await this.redis.get(key)
+    let value = await this.redis?.get(key)
     if (value === null || value === undefined) {
       return defaultValue !== undefined ? defaultValue : undefined as T
     }
@@ -177,7 +186,7 @@ export class ProcessWorker {
     } else {
       storeValue = String(value)
     }
-    await this.redis.set(key, storeValue)
+    await this.redis?.set(key, storeValue)
   }
 
   /**
@@ -247,7 +256,7 @@ export class ProcessWorker {
     }
     if (this.logStdout) {
       if (data && data.error) {
-        console.error(`[${this.workerName}-ERROR] "${msg}"`, JSON.stringify(entry, null, 2))
+        console.error(`[${this.workerName}-Error] "${msg}"`, JSON.stringify(entry, null, 2))
       } else {
         console.log(`[${this.workerName}] "${msg}"`, JSON.stringify(entry, null, 2))
       }
@@ -263,7 +272,7 @@ export class ProcessWorker {
    * @param onMessage Callback function to handle incoming messages.
    * @param lastId The last stream ID to start listening from (default: "$" for latest).
    */
-  on<T = any>(
+  async on<T = any>(
     pattern: string,
     onMessage: (data: T) => Promise<void> | void,
     lastId: string = "$"
@@ -272,7 +281,7 @@ export class ProcessWorker {
     const log = this.log.bind(this)
     async function loop(currentId: string) {
       try {
-        const response = await subscriber.xRead(
+        const response = await subscriber?.xRead(
           [{ key: pattern, id: currentId }],
           { BLOCK: 0 }
         )
