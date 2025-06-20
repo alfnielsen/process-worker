@@ -1,6 +1,7 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, beforeEach } from "bun:test"
 import { startFrontendWebSocketConnector } from "../connectors/frontend-websocket-connector-bun"
 import { FrontendWebSocketConnectorClient } from "../connectors/frontend-websocket-connector-client"
+import { MsgType } from "../connectors/MsgType"
 
 const WS_PORT = 3070
 const WS_URL = `ws://localhost:${WS_PORT}`
@@ -13,31 +14,30 @@ async function killPort(port: number) {
 }
 
 describe("FrontendWebSocketConnectorClient", () => {
-  it("should set a key", async () => {
+  beforeEach(async () => {
     await killPort(WS_PORT)
-    await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-set" })
-    await new Promise(res => setTimeout(res, 100))
+  })
+  it("should set a key", async () => {
+    const connector = await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-set" })
     const client = new FrontendWebSocketConnectorClient(WS_URL)
     const status = await client.set("key1", "value1")
     expect(status).toBe("ok")
     client.close()
+    connector.stop()
   })
 
   it("should get a key", async () => {
-    await killPort(WS_PORT)
-    await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-get" })
-    await new Promise(res => setTimeout(res, 100))
+    const connector = await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-get" })
     const client = new FrontendWebSocketConnectorClient(WS_URL)
     await client.set("key2", "value2")
     const value = await client.get("key2")
     expect(value).toBe("value2")
     client.close()
+    connector.stop()
   })
 
   it("should allow two clients to get the same key independently", async () => {
-    await killPort(WS_PORT)
-    await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-multi" })
-    await new Promise(res => setTimeout(res, 100))
+    const connector = await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-multi" })
     const client1 = new FrontendWebSocketConnectorClient(WS_URL)
     const client2 = new FrontendWebSocketConnectorClient(WS_URL)
     await client1.set("shared-key", "shared-value")
@@ -49,12 +49,11 @@ describe("FrontendWebSocketConnectorClient", () => {
     expect(value2).toBe("shared-value")
     client1.close()
     client2.close()
+    connector.stop()
   })
 
   it("should handle on (listen to a stream)", async () => {
-    await killPort(WS_PORT)
-    await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-on" })
-    await new Promise(res => setTimeout(res, 100))
+    const connector = await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-on" })
     const client = new FrontendWebSocketConnectorClient(WS_URL)
     let received: any = null
     await client.on("test-stream", data => {
@@ -67,15 +66,15 @@ describe("FrontendWebSocketConnectorClient", () => {
     expect(received).toEqual({ foo: "bar" })
     client.close()
     poster.close()
+    connector.stop()
   })
 
   it("should post to a stream", async () => {
-    await killPort(WS_PORT)
-    await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-post" })
-    await new Promise(res => setTimeout(res, 100))
+    const connector = await startFrontendWebSocketConnector(WS_PORT, { workerName: "test-ws-connector-client-post" })
     const client = new FrontendWebSocketConnectorClient(WS_URL)
     const status = await client.post("another-stream", { hello: "world" })
     expect(status).toBe("sent")
     client.close()
+    connector.stop()
   })
 })

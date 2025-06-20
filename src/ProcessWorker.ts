@@ -141,9 +141,9 @@ export class ProcessWorker {
     if (!this._started) {
       new Error("Worker not started")
     }
-    console.log(`Posting to stream: ${type} with ID: ${redisStreamId}`, data)
+    //console.log(`Posting to stream: ${type} with ID: ${redisStreamId}`, data)
     const streamId = await this.redis?.xAdd(`${type}`, redisStreamId, data)
-    console.log(`Posted to stream: ${type} with ID: ${streamId}`, data)
+    //console.log(`Posted to stream: ${type} with ID: ${streamId}`, data)
     return streamId
   }
 
@@ -272,14 +272,20 @@ export class ProcessWorker {
    * @param onMessage Callback function to handle incoming messages.
    * @param lastId The last stream ID to start listening from (default: "$" for latest).
    */
-  async on<T = any>(
+  on<T = any>(
     pattern: string,
     onMessage: (data: T) => Promise<void> | void,
     lastId: string = "$"
   ) {
     const subscriber = this.subscriber
     const log = this.log.bind(this)
+    let unsubscribe = false
     async function loop(currentId: string) {
+      if (unsubscribe) {
+        // This stops the reading, and exits the loop
+        log(`Stopped listening to stream: ${pattern}`)
+        return
+      }
       try {
         const response = await subscriber?.xRead(
           [{ key: pattern, id: currentId }],
@@ -307,6 +313,10 @@ export class ProcessWorker {
       setImmediate(() => loop(currentId))
     }
     loop(lastId)
+    // return a cleanup function to stop listening
+    return () => {
+      unsubscribe = true
+    }
   }
 
   /**

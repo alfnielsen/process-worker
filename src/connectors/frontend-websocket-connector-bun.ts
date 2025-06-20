@@ -1,6 +1,7 @@
 import { ProcessWorker, type ProcessWorkerOptions } from "../ProcessWorker"
 import { serve } from "bun"
 import type { ServerWebSocket } from "bun"
+import { MsgType } from "./MsgType"
 
 const WS_PORT = Number(process.env.WS_CONNECTOR_PORT) || 3068
 
@@ -28,7 +29,7 @@ export async function startFrontendWebSocketConnector(
     },
     websocket: {
       async open(ws: ServerWebSocket<unknown>) {
-        ws.send(JSON.stringify({ type: "connected", message: "WebSocket connection established" }))
+        ws.send(JSON.stringify({ type: MsgType.CONNECT, message: "WebSocket connection established" }))
         wsListeners.set(ws, new Map())
       },
       async message(ws: ServerWebSocket<unknown>, data) {
@@ -52,7 +53,6 @@ export async function startFrontendWebSocketConnector(
   return server
 }
 
-
 /**
  * Handles a WebSocket message for the frontend connector.
  * Extracted for testability.
@@ -61,91 +61,118 @@ export async function handleWebSocketMessage(
   send: (data: object) => void,
   data: any,
   listeners: Map<string, (msg: any) => void> | undefined,
-  worker: any
+  worker: ProcessWorker
 ) {
   let msg
   try {
     msg = typeof data === "string" ? JSON.parse(data) : data
   } catch (e) {
-    send({ type: "error", error: "Invalid JSON" })
+    send({ type: MsgType.ERROR, error: "Invalid JSON" })
     return
   }
   if (!msg || typeof msg !== "object" || !msg.type) {
-    send({ type: "error", error: "Missing type in message" })
+    send({ type: MsgType.ERROR, error: "Missing type in message" })
     return
   }
   const requestId = msg.requestId
   if (!requestId || typeof requestId !== "string") {
-    send({ type: "error", error: "Missing or invalid requestId", requestId })
+    send({ type: MsgType.ERROR, error: "Missing or invalid requestId", requestId })
     return
   }
-  if (msg.type === "get") {
+  // Get
+  if (msg.type === MsgType.GET) {
     const value = await worker.get(msg.key)
     send({
-        type: "get",
-        key: msg.key,
-        requestId,
-        status: "ok",
-        value,
-      }
-    )
-    return
-  }
-  if (msg.type === "set") {
-    await worker.set(msg.key, msg.value)
-    send({
-        type: "set",
-        key: msg.key,
-        requestId,
-        status: "ok",
-      }
-    )
-    return
-  }
-  if (msg.type === "on") {
-    if (!listeners) return
-    if (listeners.has(msg.stream)) return // already listening
-    const handler = (data: any) => {
-      send({
-          type: "listen",
-          stream: msg.stream,
-          requestId,
-          status: "data",
-          data,
-        }
-      )
-    }
-    listeners.set(msg.stream, handler)
-    worker.on(msg.stream, handler)
-    send({
-        type: "listen",
-        stream: msg.stream,
-        requestId,
-        status: "listening",
-      })
-    
-    return
-  }
-  if (msg.type === "post") {
-    await worker.post(msg.stream, msg.data)
-    send({
-      type: "post",
-      stream: msg.stream,
+      type: MsgType.GET,
+      key: msg.key,
       requestId,
-      status: "sent"
+      status: "ok",
+      value,
     })
     return
   }
-  if (msg.type === "ping") {
-    send({ type: "pong", requestId })
+  // Set
+  if (msg.type === MsgType.SET) {
+    await worker.set(msg.key, msg.value)
+    send({
+      type: MsgType.SET,
+      key: msg.key,
+      requestId,
+      status: "ok",
+    })
     return
   }
-  if (msg.type === "connected") {
-    send({ type: "connected", message: "WebSocket connection established", requestId })
+  // Handle listen and unlisten
+  // Listen
+  if (msg.type === MsgType.LISTEN) {
+    if (!listeners) return
+    // Allow multiple listeners per stream/requestId by using a composite key
+    const listenerKey = `${MsgType.LISTEN}:${msg.stream}:${msg.requestId}`
+    const unsub = worker.on(msg.stream, (data: any) => {
+      send({
+        type: MsgType.LISTEN,
+        stream: msg.stream,
+        requestId,
+        status: MsgType.DATA,
+        data,
+      })
+    })
+    listeners.set(listenerKey, unsub)
+    send({
+      type: MsgType.LISTEN,
+      stream: msg.stream,
+      requestId,
+      status: "listening",
+    })
     return
   }
+   // Unlisten
+  if (msg.type === MsgType.UNLISTEN) {
+    if (!listeners) return
+    // Allow multiple listeners per stream/requestId by using a composite key
+    const listenerKey = `${MsgType.LISTEN}:${msg.stream}:${msg.requestId}`
+    const hasKey = listeners.has(listenerKey)
+    if (!hasKey) {
+      send({
+        type: MsgType.UNLISTEN,
+        stream: msg.stream,
+        requestId,
+        status: "not found",
+      })
+      return
+    }
+    // Call the unsubscribe function
+    const unsub = listeners.get(listenerKey);
+    unsub?.("unsubscribed")
+    // Remove the listener from the map
+    listeners.delete(listenerKey)
+    send({
+      type: MsgType.UNLISTEN,
+      stream: msg.stream,
+      requestId,
+      status: "unsubscribed",
+    })
+  }
+  // Post
+  if (msg.type === MsgType.POST) {
+    await worker.post(msg.stream, msg.data)
+    send({
+      type: MsgType.POST,
+      stream: msg.stream,
+      requestId,
+      status: "sent",
+    })
+    // Also notify listeners if any
+    const listenerKey = `${MsgType.POST}:${requestId}:${msg.stream}`
+    if (listeners && listeners.has(listenerKey)) {
+      listeners.get(listenerKey)?.("sent")
+      listeners.delete(listenerKey)
+    }
+    return
+  }
+  // Handle other message types
   send({
-    type: "error",
+    type: MsgType.ERROR,
     error: "Unknown type",
     requestId,
   })

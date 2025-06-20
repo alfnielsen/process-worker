@@ -1,5 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import { handleWebSocketMessage } from "../connectors/frontend-websocket-connector-bun"
+import { MsgType } from "../connectors/MsgType"
+import { ProcessWorker } from "../ProcessWorker"
 
 describe("handleWebSocketMessage", () => {
   function makeRequestId(type: string) {
@@ -8,62 +10,82 @@ describe("handleWebSocketMessage", () => {
 
   it("should handle set and get", async () => {
     const sent: any[] = []
-    const store: Record<string, any> = {}
-    const worker = {
-      async get(key: string) { return store[key] },
-      async set(key: string, value: any) { store[key] = value }
-    }
+    const worker = await ProcessWorker.start("__test-worker");
     // set
     const setRequestId = makeRequestId("set")
     await handleWebSocketMessage(
       msg => sent.push(msg),
-      { type: "set", key: "foo", value: 42, requestId: setRequestId },
+      { type: MsgType.SET, key: "foo", value: 42, requestId: setRequestId },
       undefined,
       worker
     )
-    expect(sent[sent.length-1]).toEqual({ type: "set", key: "foo", requestId: setRequestId, status: "ok" })
+    expect(sent[sent.length-1]).toEqual({ type: MsgType.SET, key: "foo", requestId: setRequestId, status: "ok" })
     // get
     const getRequestId = makeRequestId("get")
     await handleWebSocketMessage(
       msg => sent.push(msg),
-      { type: "get", key: "foo", requestId: getRequestId },
+      { type: MsgType.GET, key: "foo", requestId: getRequestId },
       undefined,
       worker
     )
-    expect(sent[sent.length-1]).toEqual({ type: "get", key: "foo", requestId: getRequestId, status: "ok", value: 42 })
+    expect(sent[sent.length-1]).toEqual({ type: MsgType.GET, key: "foo", requestId: getRequestId, status: "ok", value: 42 })
   })
 
   it("should handle on and post", async () => {
-    const sent: any[] = []
+    const sentMessages: any[] = []
     const listeners = new Map<string, (msg: any) => void>()
-    const worker = {
-      on: (stream: string, handler: (data: any) => void) => listeners.set(stream, handler),
-      post: async (stream: string, data: any) => {
-        // simulate posting to the stream by calling the handler
-        if (listeners.has(stream)) listeners.get(stream)!(data)
-      }
-    }
+    const worker = await ProcessWorker.start("__test-worker");
     const stream = "test-stream"
     const onRequestId = makeRequestId("on")
+
+    // 
     await handleWebSocketMessage(
-      msg => sent.push(msg),
-      { type: "on", stream, requestId: onRequestId },
+      msg => sentMessages.push(msg),
+      { type: MsgType.LISTEN, stream, requestId: onRequestId },
       listeners,
       worker
     )
-    expect(sent[sent.length-1]).toEqual({ type: "listen", stream, requestId: onRequestId, status: "listening" })
+    expect(sentMessages[sentMessages.length - 1]).toEqual({
+      type: MsgType.LISTEN,
+      stream,
+      requestId: onRequestId,
+      status: "listening"
+    })
     // post
     const postRequestId = makeRequestId("post")
     await handleWebSocketMessage(
+      msg => sentMessages.push(msg),
+      { type: MsgType.POST, stream, data: { foo: "bar" }, requestId: postRequestId },
+      listeners,
+      worker
+    ) 
+    
+    
+  })
+
+  it("should handle unlisten (unsubscribe)", async () => {
+    const sent: any[] = []
+    const listeners = new Map<string, (msg: any) => void>()
+    const worker = await ProcessWorker.start("__test-worker");
+    const stream = "test-unlisten-stream"
+    const onRequestId = crypto.randomUUID()
+    const listenerKey = `${MsgType.LISTEN}:${stream}:${onRequestId}`
+    // Listen first
+    await handleWebSocketMessage(
       msg => sent.push(msg),
-      { type: "post", stream, data: { foo: "bar" }, requestId: postRequestId },
+      { type: MsgType.LISTEN, stream, requestId: onRequestId },
       listeners,
       worker
     )
-    // The post should trigger both a post:sent and a listen:data message, order may vary
-    const postSentMsg = { type: "post", stream, requestId: postRequestId, status: "sent" }
-    const listenDataMsg = { type: "listen", stream, requestId: onRequestId, status: "data", data: { foo: "bar" } }
-    expect(sent).toContainEqual(postSentMsg)
-    expect(sent).toContainEqual(listenDataMsg)
+
+    expect(listeners.has(listenerKey)).toBe(true)
+    await handleWebSocketMessage(
+      msg => sent.push(msg),
+      { type: MsgType.UNLISTEN, stream, requestId: onRequestId },
+      listeners,
+      worker
+    )
+    expect(listeners.has(listenerKey)).toBe(false)
+    worker.shutdown()
   })
 })

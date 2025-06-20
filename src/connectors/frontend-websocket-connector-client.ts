@@ -1,3 +1,5 @@
+import { MsgType } from "./MsgType"
+
 /**
  * FrontendWebSocketConnectorClient
  * A simple client for connecting to the Bun WebSocket backend and using get, set, on, and post methods.
@@ -28,45 +30,65 @@ export class FrontendWebSocketConnectorClient {
       return
     }
     // Handle the message based on its type
-    if (msg.type === "error") {
+    if (msg.type === MsgType.ERROR) {
       console.error("Error from server:", msg.error)
       return
     }
-    if (msg.type === "connected") {
+    if (msg.type === MsgType.CONNECT) {
       console.log("WebSocket connection established:", msg.message)
       return
     }
-    if (msg.type === "disconnected") {
+    if (msg.type === MsgType.DISCONNECT) {
       console.log("WebSocket connection closed:", msg.message)
       this.close()
       return
     }
-    // Validate requestId
-    if (!msg.requestId || typeof msg.requestId !== "string") {
-      console.error("Missing or invalid requestId in message:", msg)
-      return
-    }
-
-    const listenerKey = `${msg.requestId}:${msg.type}`
-    if (this.listeners.has(listenerKey)) {
-      const listener = this.listeners.get(listenerKey)
-      if (listener) {
-        listener(msg)
-        this.listeners.delete(listenerKey)
+    if (msg.type === MsgType.GET) {
+      if (msg.key && msg.requestId) {
+        const listenerKey = `${MsgType.GET}:${msg.key}:${msg.requestId}`
+        if (this.listeners.has(listenerKey)) {
+          this.listeners.get(listenerKey)?.(msg.value)
+          this.listeners.delete(listenerKey)
+        }
       }
       return
     }
-    if (msg.type === "on" && msg.stream && this.listeners.has(msg.stream)) {
-      this.listeners.get(msg.stream)?.(msg.data)
+    if (msg.type === MsgType.SET) {
+      if (msg.key && msg.requestId) {
+        const listenerKey = `${MsgType.SET}:${msg.requestId}:${msg.key}`
+        if (this.listeners.has(listenerKey)) {
+          this.listeners.get(listenerKey)?.(msg.status)
+          this.listeners.delete(listenerKey)
+        }
+      }
+      return
     }
-    if (msg.type === "get" && msg.key && this.listeners.has(`get:${msg.key}`)) {
-      this.listeners.get(`get:${msg.key}`)?.(msg.value)
+    if (msg.type === MsgType.POST) {
+      if (msg.stream && msg.requestId) {
+        const listenerKey = `${MsgType.POST}:${msg.requestId}:${msg.stream}`
+        if (this.listeners.has(listenerKey)) {
+          this.listeners.get(listenerKey)?.(msg.status)
+          this.listeners.delete(listenerKey)
+        }
+      }
+      return
     }
-    if (msg.type === "set" && msg.key && this.listeners.has(`set:${msg.key}`)) {
-      this.listeners.get(`set:${msg.key}`)?.(msg.status)
+    if (msg.type === MsgType.LISTEN) {
+      if (msg.stream && msg.requestId && msg.status === MsgType.DATA) {
+        const listenerKey = `${MsgType.LISTEN}:${msg.stream}:${msg.requestId}`
+        if (this.listeners.has(listenerKey)) {
+          this.listeners.get(listenerKey)?.(msg.data)
+        }
+      }
+      return
     }
-    if (msg.type === "post" && msg.stream && this.listeners.has(`post:${msg.stream}`)) {
-      this.listeners.get(`post:${msg.stream}`)?.(msg.status)
+    if (msg.type === MsgType.DATA) {
+      // Reserved for future use if needed
+      return
+    }
+    if (msg.type === MsgType.STATUS) {
+      // Reserved for future use if needed
+      return
     }
   }
 
@@ -74,12 +96,12 @@ export class FrontendWebSocketConnectorClient {
     await this.ready
     return new Promise(resolve => {
       const requestId = crypto.randomUUID()
-      const listenerKey = `get:${key}:${requestId}`
+      const listenerKey = `${MsgType.GET}:${key}:${requestId}`
       this.listeners.set(listenerKey, value => {
         this.listeners.delete(listenerKey)
         resolve(value)
       })
-      this.ws.send(JSON.stringify({ type: "get", requestId, key }))
+      this.ws.send(JSON.stringify({ type: MsgType.GET, requestId, key }))
     })
   }
 
@@ -87,12 +109,12 @@ export class FrontendWebSocketConnectorClient {
     await this.ready
     return new Promise(resolve => {
       const requestId = crypto.randomUUID()
-      const listenerKey = `set:${requestId}:${key}`
+      const listenerKey = `${MsgType.SET}:${requestId}:${key}`
       this.listeners.set(listenerKey, status => {
         this.listeners.delete(listenerKey)
         resolve(status)
       })
-      this.ws.send(JSON.stringify({ type: "set", requestId, key, value }))
+      this.ws.send(JSON.stringify({ type: MsgType.SET, requestId, key, value }))
     })
   }
 
@@ -100,14 +122,14 @@ export class FrontendWebSocketConnectorClient {
     await this.ready
     return new Promise(resolve => {
       const requestId = crypto.randomUUID()
-      const listenerKey = `post:${requestId}:${stream}`
+      const listenerKey = `${MsgType.POST}:${requestId}:${stream}`
       this.listeners.set(listenerKey, status => {
         this.listeners.delete(listenerKey)
         resolve(status)
       })
       this.ws.send(
         JSON.stringify({
-          type: "post",
+          type: MsgType.POST,
           requestId,
           stream,
           data,
@@ -116,15 +138,28 @@ export class FrontendWebSocketConnectorClient {
     })
   }
 
-  async on(stream: string, handler: (data: any) => void): Promise<void> {
+  async on(stream: string, handler: (data: any) => void): Promise<string> {
     await this.ready
     const requestId = crypto.randomUUID()
-    this.listeners.set(stream, handler)
+    const listenerKey = `${MsgType.LISTEN}:${stream}:${requestId}`
+    this.listeners.set(listenerKey, handler)
     this.ws.send(
       JSON.stringify({
-        type: "on",
+        type: MsgType.LISTEN,
         requestId,
         stream,
+      })
+    )
+    return listenerKey
+  }
+
+  async off(stream: string, requestId: string): Promise<void> {
+    await this.ready
+    this.ws.send(
+      JSON.stringify({
+        type: MsgType.UNLISTEN,
+        requestId,
+        stream,        
       })
     )
   }
