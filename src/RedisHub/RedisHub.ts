@@ -1,14 +1,9 @@
 import Redis from "ioredis"
+import type { IRedisCacheEvent } from "./IRedisCacheEvent"
 
 // Debug utility
 const debug = (...args: any[]) => {
   if (process.env.DEBUG) console.log(...args)
-}
-
-export type RedisCacheEvent = {
-  id: string
-  type: string
-  data: object
 }
 
 export default class RedisHub {
@@ -42,7 +37,7 @@ export default class RedisHub {
     stream: string, start: string = "-", end: string = "+", count: number = 1000
   ) {
     const streamItems = await redis.xrange(stream, start, end, "COUNT", count)
-    const result: RedisCacheEvent[] = []
+    const result: IRedisCacheEvent[] = []
     for (const streamItem of streamItems) {
       const [id, item] = streamItem
       const [type, data] = item
@@ -51,7 +46,7 @@ export default class RedisHub {
         continue // Skip invalid items
       }
       const parsedData = data ? JSON.parse(data) : {}
-      const event: RedisCacheEvent = {
+      const event: IRedisCacheEvent = {
         id: id,
         type: type,
         data: parsedData,
@@ -64,7 +59,7 @@ export default class RedisHub {
   static listen(
     sub: Redis,
     stream: string,
-    handler: (event: RedisCacheEvent) => void | boolean | Promise<void | boolean>
+    handler: (event: IRedisCacheEvent) => void | boolean | Promise<void | boolean>
   ) {
     let lastId = "$"
     const listenForNext = async () => {
@@ -84,7 +79,7 @@ export default class RedisHub {
           console.warn(`Invalid message format in stream ${stream}: ${JSON.stringify(messages)}`)
           continue
         }
-        const event: RedisCacheEvent = { id, type, data: _data }
+        const event: IRedisCacheEvent = { id, type, data: _data }
         const response = handler(event)
         const stop = response instanceof Promise ? await response : response
         if (stop === false || event.type === "complete" || stop === true) {
@@ -196,7 +191,7 @@ export default class RedisHub {
 
   listen(
     stream: string,
-    handler: (message: RedisCacheEvent) => void | boolean | Promise<void | boolean>,
+    handler: (message: IRedisCacheEvent) => void | boolean | Promise<void | boolean>,
     ignorePrefix: boolean = false
   ) {
     const _key = this.key(stream, ignorePrefix)

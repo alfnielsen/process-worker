@@ -1,5 +1,5 @@
-import RedisHub from "./RedisHub/RedisHub"
-import RedisRepo, { type EntityId } from "./RedisRepo"
+import RedisHub from "../RedisHub/RedisHub"
+import RedisRepo, { type EntityId } from "../RedisRepo"
 import { Worker } from "./Worker"
 
 /**

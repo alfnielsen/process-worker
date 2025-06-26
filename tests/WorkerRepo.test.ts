@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from "bun:test"
 import { sleep } from "bun"
-import WorkerRepo, { type IWorkerInfo, type WorkerStatus } from "../src/WorkerRepo"
-import { Worker } from "../src/Worker"
+import WorkerRepo, { type IWorkerInfo, type WorkerStatus } from "../src/Worker/WorkerRepo"
+import { Worker } from "../src/Worker/Worker"
 
 const prefix = "__test__worker-repo__"
 

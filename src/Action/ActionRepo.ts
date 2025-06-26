@@ -1,38 +1,9 @@
-import RedisHub, { type RedisCacheEvent } from "../RedisHub/RedisHub"
+import RedisHub from "../RedisHub/RedisHub"
 import RedisRepo, { type EntityId } from "../RedisRepo"
 import { ActionRequest } from "./ActionRequest"
 import createDebug from "debug"
+import type { IActionObject, IActionObjectAny, IActionObjectWithEvents, ActionEventHandler, ActionQueueEventHandler, ActionStatus } from "./IActionRequest"
 const debug = createDebug("ActionRepo")
-
-export type IActionObject<
-  TArg extends object,
-  TData extends object,
-  TError extends object | undefined,
-  TOutput extends object | undefined,
-> = {
-  id: string
-  name: string
-  created: number
-  arg: TArg
-  data: TData
-  status: ActionStatus
-  error: TError | undefined
-  output: TOutput | undefined
-  }
-export type IActionObjectAny = IActionObject<any, any, any, any>
-
-export type IActionObjectWithEvents<
-  TArg extends object,
-  TData extends object,
-  TError extends object | undefined,
-  TOutput extends object | undefined,
-> = IActionObject<TArg, TData, TError, TOutput> & {
-  events: RedisCacheEvent[]
-}
-
-export type ActionEventHandler = (event: RedisCacheEvent) => void | boolean | Promise<void | boolean>
-export type ActionQueueEventHandler = (action: IActionObjectAny) => void | boolean | Promise<void | boolean>
-export type ActionStatus = "pending" | "running" | "completed" | "failed" | "cancelled"
 
 export class ActionRepo extends RedisRepo {
   static override async createRepo(opt: {

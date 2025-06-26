@@ -1,5 +1,6 @@
-import type { RedisCacheEvent } from "../RedisHub/RedisHub"
-import type { ActionStatus, IActionObject, IActionObjectWithEvents, ActionEventHandler } from "./ActionRepo"
+
+import type { IRedisCacheEvent } from "../RedisHub/IRedisCacheEvent"
+import type { ActionStatus, IActionObject, IActionObjectWithEvents, ActionEventHandler } from "./IActionRequest"
 
 export class ActionRequest<
   TArg extends object = object,
@@ -15,7 +16,7 @@ export class ActionRequest<
   data: TData = {} as TData
   error: TError | undefined = undefined
   output: TOutput | undefined = undefined
-  events: RedisCacheEvent[] = []
+  events: IRedisCacheEvent[] = []
 
   // Decoupled: pass in all needed functions
   private _publish: (action: any, eventType: string, data: object) => Promise<void>

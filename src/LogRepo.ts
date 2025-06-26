@@ -1,4 +1,5 @@
-import RedisHub, { type RedisCacheEvent } from "./RedisHub/RedisHub"
+import type { IRedisCacheEvent } from "./RedisHub/IRedisCacheEvent"
+import RedisHub from "./RedisHub/RedisHub"
 import RedisRepo, { type EntityId } from "./RedisRepo"
 
 // Debug utility
@@ -27,7 +28,7 @@ export class LogRequest<TData = any> implements ILogObject<TData> {
   message: string
   data?: TData
   timestamp: number
-  events: RedisCacheEvent[] = []
+  events: IRedisCacheEvent[] = []
   private _repo: LogRepo
   get repo(): LogRepo {
     return this._repo
