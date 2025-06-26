@@ -10,6 +10,18 @@ A worker process helper for using Redis cache and streams. Provides a simple int
 - Modular connectors for server and client (WebSocket)
 - TypeScript support
 
+## File Structure (src/)
+
+| File                        | Purpose                                                                 |
+|-----------------------------|-------------------------------------------------------------------------|
+| `ProcessWorker.ts`          | Main class for creating and managing workers, stream and cache handling. |
+| `RedisHub.ts`               | Redis stream and cache abstraction, core Redis logic.                    |
+| `RedisHubSocket.ts`         | WebSocket server for stream and cache communication.                     |
+| `RedisHubSocketClient.ts`   | WebSocket client for connecting to the RedisHubSocket server.            |
+| `ActionRepo.ts`             | Utilities for managing and storing actions in Redis.                     |
+| `LogRepo.ts`                | Utilities for logging and retrieving logs from Redis.                    |
+| `RedisRepo.ts`              | Low-level Redis repository utilities.                                    |
+
 ## Installation
 
 ```sh
