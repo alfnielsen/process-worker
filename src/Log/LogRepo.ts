@@ -1,6 +1,7 @@
-import type { IRedisCacheEvent } from "./RedisHub/IRedisCacheEvent"
-import RedisHub from "./RedisHub/RedisHub"
-import RedisRepo, { type EntityId } from "./RedisRepo"
+import type { IRedisCacheEvent } from "../RedisHub/IRedisCacheEvent"
+import RedisHub from "../RedisHub/RedisHub"
+import RedisRepo, { type EntityId } from "../RedisRepo/RedisRepo"
+import type { ILogObject, LogEventHandler, LogType } from "./ILogObject"
 
 // Debug utility
 const debug = (...args: any[]) => {
@@ -8,67 +9,6 @@ const debug = (...args: any[]) => {
 }
 
 export type LogId = { id: string } | string
-
-type ILogObject<TData = any> = {
-  id: string
-  type: string
-  level: string
-  message: string
-  data?: TData
-  timestamp?: number
-}
-
-export type LogEventHandler = (log: ILogObject) => void | boolean | Promise<void | boolean>
-export type LogType = "info" | "warn" | "error" | "debug" | "trace" | string
-
-export class LogRequest<TData = any> implements ILogObject<TData> {
-  id: string
-  type: string
-  level: string
-  message: string
-  data?: TData
-  timestamp: number
-  events: IRedisCacheEvent[] = []
-  private _repo: LogRepo
-  get repo(): LogRepo {
-    return this._repo
-  }
-
-  get json(): ILogObject<TData> {
-    return {
-      id: this.id,
-      type: this.type,
-      level: this.level,
-      message: this.message,
-      data: this.data,
-      timestamp: this.timestamp,
-    }
-  }
-
-  static create<TData = any>(
-    opt: { type: string; level: string; message: string } & Partial<ILogObject<TData>>,
-    repo: LogRepo
-  ): LogRequest<TData> {
-    return new LogRequest<TData>({
-      id: opt.id || crypto.randomUUID(),
-      type: opt.type,
-      level: opt.level,
-      message: opt.message,
-      data: opt.data,
-      timestamp: opt.timestamp || Date.now(),
-    }, repo)
-  }
-
-  private constructor(opt: Partial<ILogObject<TData>> & { type: string; level: string; message: string }, repo: LogRepo) {
-    this._repo = repo
-    this.id = opt.id || crypto.randomUUID()
-    this.type = opt.type
-    this.level = opt.level
-    this.message = opt.message
-    this.data = opt.data
-    this.timestamp = opt.timestamp || Date.now()
-  }
-}
 
 export class LogRepo extends RedisRepo {
   static override async createRepo(opt: {

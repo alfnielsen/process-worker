@@ -1,7 +1,7 @@
 {
   "name": "redis-process-worker",
   "description": "A worker process helper for using redis cache and streams.",
-  "version": "0.0.1009-beta",
+  "version": "0.0.2001-beta",
   "module": "src/ProcessWorker.ts",
   "main": "dist/ProcessWorker.js",
   "types": "dist/types/index.d.ts",
@@ -26,22 +26,12 @@
     ".": {
       "import": "./dist/ProcessWorker.js",
       "require": "./dist/ProcessWorker.js",
-      "types": "./dist/types/index.d.ts"
-    },
-    "./server": {
-      "import": "./dist/server/server-connector.js",
-      "require": "./dist/server/server-connector.js",
-      "types": "./dist/types/server/index.d.ts"
+      "types": "./dist/types/ProcessWorker.d.ts"
     },
     "./client": {
       "import": "./dist/client/client-connector.js",
       "require": "./dist/client/client-connector.js",
-      "types": "./dist/types/client/index.d.ts"
-    },
-    "./msgtype": {
-      "import": "./dist/shared/MsgType.js",
-      "require": "./dist/shared/MsgType.js",
-      "types": "./dist/types/shared/index.d.ts"
+      "types": "./dist/types/client/client-connector.d.ts"
     }
   },
   "license": "MIT",

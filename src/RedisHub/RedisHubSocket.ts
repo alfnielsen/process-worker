@@ -1,3 +1,4 @@
+import type { IWebSocketMessage } from "./IWebSocketMessage"
 import RedisHub from "./RedisHub"
 
 // Debug utility
@@ -5,16 +6,6 @@ const debug = (...args: any[]) => {
   if (process.env.DEBUG) console.log(...args)
 }
 
-export type Message = {
-  type: string // The type of message (e.g., "listen", "publish", "getVal", etc.)
-  response?: boolean // Indicates if this is a response to a request
-  requestId?: string // Optional request ID for tracking responses
-  message?: string // Optional message for responses
-  status?: string // Optional status message
-  error?: string // Optional error message
-  payload?: any // The payload of the message
-  [extra: string]: any // Allow extra fields
-}
 
 // This is a WebSocket that connects to a RedisHub
 export class RedisHubSocket {
@@ -196,15 +187,15 @@ export class RedisHubSocket {
     return this._hub.delKeys(pattern, ignorePrefix)
   }
 
-  static parseMessage(message: string | object): Message {
-    let msg: Message | undefined
+  static parseMessage(message: string | object): IWebSocketMessage {
+    let msg: IWebSocketMessage | undefined
     try {
       // Parse the incoming message
       msg = typeof message === "string" ? JSON.parse(message) : message
       if (!msg || typeof msg !== "object" || !msg.type) {
         return { type: "error", error: "Invalid message format" }
       }
-      return msg as Message
+      return msg as IWebSocketMessage
     } catch (e) {
       return { type: "error", error: "Invalid JSON" }
     }

@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test"
 import { sleep } from "bun"
-import LogRepo, { LogRequest } from "../src/LogRepo"
-
-
+import LogRepo from "../src/Log/LogRepo"
+import { LogRequest } from "../src/Log/LogRequest"
 
 const prefix = "__test__log-repo__"
 let repo: LogRepo
-
 
 
 beforeAll(async () => {
@@ -14,6 +12,7 @@ beforeAll(async () => {
     prefix
   })
 })
+
 afterAll(async () => {
   // Optionally clean up test keys here
   await repo.hub.delKeys(`${repo.hub.prefix}*`, true)
@@ -29,7 +28,7 @@ describe("LogRepo", () => {
       level: "info",
       message: "Test log entry",
       data: { foo: "bar" },
-    }, repo)
+    })
     await repo.saveLog(logEntry)
     await sleep(100)
     const storeKey = repo.getLogStoreKey(logId)
@@ -49,7 +48,7 @@ describe("LogRepo", () => {
       level: "error",
       message: "Error log entry",
       data: {},
-    }, repo)
+    })
     await repo.saveLog(logEntry)
     await sleep(100)
     const storeKey = repo.getLogStoreKey(logId)
@@ -71,7 +70,7 @@ describe("LogRepo", () => {
       level: "info",
       message: "Streamed log entry",
       data: { bar: "baz" },
-    }, repo)
+    })
     await repo.saveLog(logEntry)
     await sleep(150)
     expect(got.length).toBeGreaterThan(0)

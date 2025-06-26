@@ -1,21 +1,12 @@
 import RedisHub from "../RedisHub/RedisHub"
-import RedisRepo, { type EntityId } from "../RedisRepo"
+import RedisRepo, { type EntityId } from "../RedisRepo/RedisRepo"
 import { Worker } from "./Worker"
+import type { WorkerStatus, IWorkerInfo } from "./IWorkerInfo"
 
 /**
  * WorkerRepo: Manages worker metadata and status in Redis.
  * Stores and retrieves worker information, status, and heartbeats.
  */
-export type WorkerStatus = "idle" | "busy" | "offline" | "error"
-
-export interface IWorkerInfo {
-  id: string
-  name: string
-  status: WorkerStatus
-  lastSeen: number
-  meta?: Record<string, any>
-}
-
 export class WorkerRepo extends RedisRepo {
   static override async createRepo(opt: {
     prefix?: string,

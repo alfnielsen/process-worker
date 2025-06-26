@@ -1,10 +1,10 @@
 import { describe, it, expect } from "bun:test"
 import ActionRepo from "../src/Action/ActionRepo"
-import LogRepo from "../src/LogRepo"
+import LogRepo from "../src/Log/LogRepo"
 import RedisHub from "../src/RedisHub/RedisHub"
 import { RedisHubSocket } from "../src/RedisHub/RedisHubSocket"
 import { RedisHubSocketClient } from "../src/RedisHub/RedisHubSocketClient"
-import RedisRepo from "../src/RedisRepo"
+import RedisRepo from "../src/RedisRepo/RedisRepo"
 import WorkerRepo from "../src/Worker/WorkerRepo"
 import { sleep } from "bun"
 

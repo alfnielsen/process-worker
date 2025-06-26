@@ -1,5 +1,5 @@
 import RedisHub from "../RedisHub/RedisHub"
-import RedisRepo, { type EntityId } from "../RedisRepo"
+import RedisRepo, { type EntityId } from "../RedisRepo/RedisRepo"
 import { ActionRequest } from "./ActionRequest"
 import createDebug from "debug"
 import type { IActionObject, IActionObjectAny, IActionObjectWithEvents, ActionEventHandler, ActionQueueEventHandler, ActionStatus } from "./IActionRequest"

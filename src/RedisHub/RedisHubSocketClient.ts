@@ -1,13 +1,4 @@
-export type Message = {
-  type: string // The type of message (e.g., "listen", "publish", "getVal", etc.)
-  response?: boolean // Indicates if this is a response to a request
-  requestId?: string // Optional request ID for tracking responses
-  message?: string // Optional message for responses
-  status?: string // Optional status message
-  error?: string // Optional error message
-  payload?: any // The payload of the message
-  [extra: string]: any // Allow extra fields
-}
+import type { IWebSocketMessage } from "./IWebSocketMessage"
 
 // This is a WebSocket client for RedisHub, intended for browser use
 export class RedisHubSocketClient {
@@ -45,7 +36,7 @@ export class RedisHubSocketClient {
       if (!this.reconnecting) this.reconnect()
     }
     ws.onmessage = (event) => {
-      let msg: Message
+      let msg: IWebSocketMessage
       try {
         msg = typeof event.data === "string" ? JSON.parse(event.data) : event.data
       } catch {
@@ -69,7 +60,7 @@ export class RedisHubSocketClient {
     }, this.reconnectInterval)
   }
 
-  private send(msg: Message) {
+  private send(msg: IWebSocketMessage) {
     if (this.isOpen) {
       this.ws.send(JSON.stringify(msg))
     } else {
@@ -117,7 +108,7 @@ export class RedisHubSocketClient {
     return this.sendRequest({ type: "delKeys", pattern })
   }
 
-  private sendRequest(msg: Message): Promise<any> {
+  private sendRequest(msg: IWebSocketMessage): Promise<any> {
     const requestId = crypto.randomUUID()
     msg.requestId = requestId
     return new Promise((resolve) => {
