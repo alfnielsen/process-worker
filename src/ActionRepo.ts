@@ -92,7 +92,7 @@ export class ActionRequest<
     TOutput extends object | undefined = undefined,
   >(
     opt: { name: string } & Partial<IActionObject<TArg, TData, TError, TOutput>>,
-    repo: ActionRepo = ActionRepo.createRepo()
+    repo: ActionRepo
   ): ActionRequest<TArg, TData, TError, TOutput> {
     const action = new ActionRequest<TArg, TData, TError, TOutput>({
       id: opt.id || (crypto.randomUUID() as string),
@@ -110,7 +110,7 @@ export class ActionRequest<
 
   private constructor(
     action: IActionObject<TArg, TData, TError, TOutput> | IActionObjectWithEvents<TArg, TData, TError, TOutput>,
-    repo: ActionRepo = ActionRepo.createRepo()
+    repo: ActionRepo
   ) {
     this._repo = repo;
     this.name = action.name
@@ -232,20 +232,23 @@ export class ActionRequest<
 }
 
 export class ActionRepo extends RedisRepo {
-  static createRepo(opt: {
+  static override async createRepo(opt: {
     prefix?: string,
     baseKey?: string,
     queueKey?: string,
-  } = {}): ActionRepo {
-    return new ActionRepo(opt)
+  } = {}): Promise<ActionRepo> {
+    const hub = await RedisHub.createHub({ prefix: opt.prefix })
+    const repo = new ActionRepo(hub, opt)
+    await repo.waitReady()
+    return repo
   }
 
-  constructor(opt: {
+  constructor(hub:RedisHub, opt: {
     prefix?: string,
     baseKey?: string,
     queueKey?: string,
   } = {}) {
-    super(opt)
+    super(hub, opt)
   }
 
   // Redis keys for action data
@@ -429,16 +432,5 @@ export class ActionRepo extends RedisRepo {
   }
 }
 
-// Placeholder for LogRepo, assuming similar structure
-export class LogRepo extends RedisRepo {
-  constructor(opt: {
-    prefix?: string,
-    baseKey?: string,
-    queueKey?: string,
-  } = {}) {
-    super(opt)
-  }
-  // ...LogRepo-specific methods...
-}
 
 export default ActionRepo

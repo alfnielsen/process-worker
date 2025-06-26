@@ -17,8 +17,13 @@ export class RedisHubSocket {
   get hub() {
     return this._hub
   }
-  constructor(opt: { prefix?: string } = {}) {
-    this._hub = RedisHub.createHub(opt)
+  static async createHub(opt: { prefix?: string } = {}) {
+    const hub = await RedisHub.createHub(opt)
+    return new RedisHubSocket(hub, opt)
+  }
+
+  private  constructor(hub:RedisHub, opt: { prefix?: string } = {}) {
+    this._hub = hub
   }
 
   /**
@@ -66,7 +71,7 @@ export class RedisHubSocket {
             if (!subscriptions.get(ws)!.has(msg.stream)) {
               subscriptions.get(ws)!.add(msg.stream)
               // Create a dedicated RedisHub instance for this subscription
-              const dedicatedHub = RedisHub.createHub({ prefix: hub.prefix })
+              const dedicatedHub = await RedisHub.createHub({ prefix: hub.prefix })
               dedicatedHub.listen(msg.stream, event => {
                 if (clients.has(ws)) {
                   // Forward eventType and data at top level for test compatibility

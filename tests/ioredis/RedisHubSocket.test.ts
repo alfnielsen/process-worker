@@ -8,7 +8,8 @@ const WS_URL = `ws://localhost:${PORT}`
 describe("RedisHubSocket WebSocket server", () => {
   let server: any
   beforeAll(async () => {
-    const hubSocket = new RedisHubSocket({ prefix: "__test__redis-hub-socket__" })
+    const hubSocket = await RedisHubSocket.createHub({ prefix: "__test__redis-hub-socket__" })
+    // Create a new RedisHub      
     server = await hubSocket.listen({ port: PORT })
     await sleep(50)
   })

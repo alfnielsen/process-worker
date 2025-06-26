@@ -1,17 +1,23 @@
-import { describe, it, expect, afterAll } from "bun:test"
+import { describe, it, expect, afterAll, beforeAll } from "bun:test"
 import RedisHub from "../../src/RedisHub"
 import { sleep } from "bun"
 
 const prefix = "__test__redis-hub__"
-const redisHub = RedisHub.createHub({
-  prefix
+let redisHub: RedisHub
+
+beforeAll(async () => {
+  redisHub = await RedisHub.createHub({ prefix })
+})
+
+afterAll(async () => {
+  // Clean up test keys
+  await redisHub.delKeys(`${prefix}*`, true)
+  console.log("Test keys deleted")
+  //await redisHub.quit()
+  console.log("Buy! RedisHub instance")
 })
 
 describe("RedisHub", () => {
-  afterAll(async () => {
-    // Clean up test keys
-    await redisHub.delKeys(`${prefix}*`, true)    
-  })
 
   it("should create a RedisHub instance", () => {
     expect(redisHub).toBeDefined()
@@ -48,7 +54,7 @@ describe("RedisHub", () => {
 
   it("should post and listen to a stream", async () => {
     const got: any[] = []
-    redisHub.listen("test-stream", msg => {
+    const unsubscribe = redisHub.listen("test-stream", msg => {
       // console.log("Received message (IN):", msg)
       got.push(msg)
     })
@@ -62,12 +68,16 @@ describe("RedisHub", () => {
     expect(msg).toHaveProperty("data")
     expect(msg.data).toBeDefined()
     expect(msg.data).toEqual({ foo: "bar" })
+    unsubscribe()
+    
   })
 
   it("should delete keys by pattern", async () => {
     await redisHub.setVal("test-del-pattern-1", "value1")
     await redisHub.setVal("test-del-pattern-2", "value2")
+    console.log("Setting up keys for deletion")
     const keyCount = await redisHub.getKeys("test-del-pattern-*")
+    console.log("Keys to delete:", keyCount)
     expect(keyCount.length).toBe(2)
     await redisHub.delKeys("test-del-pattern-*")
     const value1 = await redisHub.getVal("test-del-pattern-1")

@@ -12,8 +12,29 @@ export default class RedisHub {
   prefix: string = ""
   private _sub: Redis 
 
-  static createHub(opt: { prefix?: string } = {}) {
+  static async createHub(opt: { prefix?: string } = {}) {
     const instance = new RedisHub(opt)
+    if (!RedisHub.redis) {
+      RedisHub.redis = new Redis()
+    }
+    if (!RedisHub.pub) {
+      RedisHub.pub = new Redis() // Use a separate instance for publishing
+    }
+    // Wait for Redis to be ready
+    await instance.waitReady()
+    if (process.env.DEBUG) {
+      console.log(`[RedisHub.createHub] RedisHub instance created with prefix: '${instance.prefix}'`)
+    }
+    // Return the instance
+    if (process.env.DEBUG) {
+      console.log(`[RedisHub.createHub] RedisHub instance created: ${JSON.stringify(instance)}`)
+    }
+    if (opt.prefix) {
+      instance.prefix = opt.prefix
+      if (process.env.DEBUG) {
+        console.log(`[RedisHub.createHub] RedisHub prefix set to: '${instance.prefix}'`)
+      }
+    }
     return instance
   }
 
@@ -76,6 +97,14 @@ export default class RedisHub {
       await listenForNext()
     }
     listenForNext()
+    // return unsubscribe
+    return () => {
+      sub.unsubscribe(stream)
+      if (process.env.DEBUG) {
+        console.log(`[RedisHub.listen] Unsubscribed from stream: ${stream}`)
+      }
+    }
+
   }
 
   protected constructor(opt: { prefix?: string } = {}) {
@@ -108,9 +137,12 @@ export default class RedisHub {
   }
 
   async quit() {
-    await this.sub.quit()
-    await this.redis.quit()
-    await this.pub.quit()
+    console.log("[RedisHub.quit] Quitting RedisHub...")
+    await this.sub?.quit()
+    console.log("[RedisHub.quit] Subscriber connection closed.")
+    await this.redis?.quit()
+    console.log("[RedisHub.quit] Redis connection closed.")
+    await this.pub?.quit()
   }
 
   async publish(stream: string, type: string, payload: any) {
@@ -173,7 +205,7 @@ export default class RedisHub {
   ) {
     const _key = this.key(stream, ignorePrefix)
     // Start listening for messages on the stream
-    RedisHub.listen(
+    return RedisHub.listen(
       this._sub, // Use the subscriber instance
       _key,
       handler
@@ -191,5 +223,37 @@ export default class RedisHub {
     return await RedisHub.getStreamValues(
       this.redis,  
       _key, start, end, count)
+  }
+
+  async waitReady() {
+    if (this._sub) {
+      await this._waitReady(this._sub)      
+    }
+    await this._waitReady(this.redis)
+    await this._waitReady(this.pub)
+    if (process.env.DEBUG) {
+      console.log(`[RedisHub.waitReady] RedisHub is ready with prefix: '${this.prefix}'`)
+    }
+  }
+
+  private async _waitReady(repo: any) {
+    let ready = false
+    for (let i = 0; i < 20 && !ready; i++) {
+      try {
+        // Use the correct Redis instance method for ping
+        if (typeof repo.ping === "function") {
+          await repo.ping()
+          ready = true
+        } else {
+          throw new Error("Invalid Redis instance: missing ping method")
+        }
+      } catch (e) {
+        await Bun.sleep(100)
+        if (process.env.DEBUG) {
+          console.warn(`[RedisHub.waitReady] Attempt ${i + 1}: Redis not ready yet, retrying...`)
+        }
+      }
+    }
+    if (!ready) throw new Error("Redis connection not ready")
   }
 }

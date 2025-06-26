@@ -5,16 +5,33 @@ export type EntityId = { id: string } | string
 export class RedisRepo {
   hub: RedisHub
   baseKey: string
-  queueKey: string
+    queueKey: string
+    
+    static async createHub(opt: {
+        prefix?: string,
+    }) {
+        const hub = await RedisHub.createHub({ prefix: opt.prefix })
+        return hub        
+    }
+    static async createRepo(opt: {
+        prefix?: string,
+        baseKey?: string,
+        queueKey?: string,  
+    } = {}): Promise<RedisRepo> {
+        //create hub and repo
+        const hub = await this.createHub({ prefix: opt.prefix })
+        const repo = new RedisRepo(hub, opt)
+        return repo
+  }
 
-  constructor(opt: {
+  constructor(redisHub:RedisHub, opt: {
     prefix?: string,
     baseKey?: string,
     queueKey?: string,
   } = {}) {
-    this.hub = RedisHub.createHub({ prefix: opt.prefix })
-    this.baseKey = opt.baseKey || "action"
-    this.queueKey = opt.queueKey || "actionQueue"
+    this.hub = redisHub
+    this.baseKey = opt.baseKey || "entities"
+    this.queueKey = opt.queueKey || "entityQueue"
   }
 
   protected getEntityId(entity: EntityId): string {
@@ -28,6 +45,9 @@ export class RedisRepo {
       throw new Error("Entity object must have an 'id' property")
     }
     return entity.id
+  }
+  waitReady(): Promise<void> {
+    return this.hub.waitReady()
   }
 }
 

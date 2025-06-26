@@ -2,35 +2,22 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import { sleep } from "bun"
 import ActionRepo, { ActionRequest, type IActionObjectAny } from "../../src/ActionRepo"
 
-const repo = ActionRepo.createRepo({
+const repo = await ActionRepo.createRepo({
   prefix: "__test__action-repo__",
 })
-const otherRepo = ActionRepo.createRepo({
+const otherRepo = await ActionRepo.createRepo({
   prefix: "__test__action-repo__",
 })
 
-const waitForRedisReady = async (repo: ActionRepo) => {
-  // Wait for the Redis connection to be ready
-  let ready = false
-  for (let i = 0; i < 20 && !ready; i++) {
-    try {
-      await repo.hub.redis.ping()
-      ready = true
-    } catch (e) {
-      await sleep(100)
-    }
-  }
-  if (!ready) throw new Error("Redis connection not ready")
-}
+beforeAll(async () => {
+  repo.waitReady()
+  otherRepo.waitReady()
+})
+afterAll(async () => {
+  await repo.hub.delKeys(`${repo.hub.prefix}*`, true)
+})
 
 describe("ActionHub", () => {
-  beforeAll(async () => {
-    await waitForRedisReady(repo)
-    await waitForRedisReady(otherRepo)
-  })
-  afterAll(async () => {
-    //await ActionRepo.hub.delKeys(`${ActionRepo.hub.prefix}*`, true)
-  })
   it("should post and listen to a stream", async () => {   
     const actId = crypto.randomUUID() as string
     const act = repo.create({
@@ -98,7 +85,7 @@ describe("ActionHub", () => {
     // listen to the request queue
     const got: IActionObjectAny[] = []
     // Use the same repo instance for both creating and listening
-    const sharedRepo = ActionRepo.createRepo({ prefix: "__test__action-repo__" })
+    const sharedRepo = await ActionRepo.createRepo({ prefix: "__test__action-repo__" })
     sharedRepo.listenToRequestQueue((actObj) => {
       expect(actObj).toHaveProperty("id")
       expect(actObj).toHaveProperty("name")
