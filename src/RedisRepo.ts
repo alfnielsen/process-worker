@@ -1,29 +1,47 @@
 import RedisHub from "./RedisHub/RedisHub"
 
+// EntityId can be a string or an object with an id property
 export type EntityId = { id: string } | string
 
+/**
+ * RedisRepo: Base class for repositories using Redis for storage.
+ * Provides methods for creating a RedisHub, managing entity keys, and waiting for readiness.
+ */
 export class RedisRepo {
-  hub: RedisHub
-  baseKey: string
-    queueKey: string
-    
-    static async createHub(opt: {
-        prefix?: string,
-    }) {
-        const hub = await RedisHub.createHub({ prefix: opt.prefix })
-        return hub        
-    }
-    static async createRepo(opt: {
-        prefix?: string,
-        baseKey?: string,
-        queueKey?: string,  
-    } = {}): Promise<RedisRepo> {
-        //create hub and repo
-        const hub = await this.createHub({ prefix: opt.prefix })
-        const repo = new RedisRepo(hub, opt)
-        return repo
+  hub: RedisHub // The RedisHub instance used for Redis operations
+  baseKey: string // The base key for storing entities
+  queueKey: string // The key for the entity queue
+
+  /**
+   * Create a RedisHub instance with an optional prefix.
+   */
+  static async createHub(opt: {
+    prefix?: string,
+  }) {
+    const hub = await RedisHub.createHub({ prefix: opt.prefix })
+    return hub        
   }
 
+  /**
+   * Create a RedisRepo instance with optional baseKey and queueKey.
+   * This also creates a RedisHub instance.
+   */
+  static async createRepo(opt: {
+    prefix?: string,
+    baseKey?: string,
+    queueKey?: string,  
+  } = {}): Promise<RedisRepo> {
+    // Create hub and repo
+    const hub = await this.createHub({ prefix: opt.prefix })
+    const repo = new RedisRepo(hub, opt)
+    return repo
+  }
+
+  /**
+   * Constructor for RedisRepo.
+   * @param redisHub The RedisHub instance
+   * @param opt Optional settings for baseKey and queueKey
+   */
   constructor(redisHub:RedisHub, opt: {
     prefix?: string,
     baseKey?: string,
@@ -34,6 +52,10 @@ export class RedisRepo {
     this.queueKey = opt.queueKey || "entityQueue"
   }
 
+  /**
+   * Get the string ID from an EntityId (string or object with id).
+   * Throws if the ID is missing or invalid.
+   */
   protected getEntityId(entity: EntityId): string {
     if (typeof entity === "string") {
       if (!entity) {
@@ -46,6 +68,10 @@ export class RedisRepo {
     }
     return entity.id
   }
+
+  /**
+   * Wait for the underlying RedisHub to be ready.
+   */
   waitReady(): Promise<void> {
     return this.hub.waitReady()
   }

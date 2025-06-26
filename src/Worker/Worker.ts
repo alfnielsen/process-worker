@@ -12,6 +12,7 @@ export class Worker implements IWorkerInfo {
   meta?: Record<string, any>
   // Remove direct reference to WorkerRepo
   private _saveWorker: (info: IWorkerInfo) => Promise<void>
+  private _heartbeatTimer?: ReturnType<typeof setInterval>
 
   constructor(info: IWorkerInfo, saveWorker: (info: IWorkerInfo) => Promise<void>) {
     this.id = info.id
@@ -49,4 +50,27 @@ export class Worker implements IWorkerInfo {
     this.lastSeen = Date.now()
     await this.save()
   }
+
+  startHeartbeat() {
+    // This method can be used to start a heartbeat that updates lastSeen periodically
+    this.stopHeartbeat() // Ensure no duplicate timers
+    this._heartbeatTimer = setInterval(() => {
+      this.heartbeat().catch(err => {
+        console.error("Failed to update heartbeat:", err)
+      })
+    }, 10_000) // every 10 seconds
+    // return stop function
+    return () => {
+      this.stopHeartbeat()
+    }
+  }
+  stopHeartbeat() {
+    if (this._heartbeatTimer) {
+      clearInterval(this._heartbeatTimer)
+      this._heartbeatTimer = undefined
+    }
+  } 
+  
+
+  
 }

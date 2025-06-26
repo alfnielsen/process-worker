@@ -106,6 +106,19 @@ export class LogRepo extends RedisRepo {
     return log.id
   }
 
+  async log<TData = any>(message: string, type: LogType = "info", data?: TData, level?:string): Promise<ILogObject<TData>> {
+    const log: ILogObject<TData> = {
+      id: crypto.randomUUID(),
+      type,
+      level: level || "info",
+      message: message,
+      data: data,
+      timestamp: Date.now(),
+    }
+    await this.saveLog(log)
+    return log
+
+  }
   async saveLog<TData = any>(log: ILogObject<TData>): Promise<void> {
     if (!log || !log.id) throw new Error("Log object must have an 'id' property")
     const storeKey = this.getLogStoreKey(log)

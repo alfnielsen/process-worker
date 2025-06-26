@@ -23,7 +23,7 @@ export class RedisHubSocket {
     return this._hub
   }
   static async createHub(opt: { prefix?: string } = {}) {
-    const hub = await RedisHub.createHub(opt)
+    const hub = await RedisHub.createHub(opt)    
     return new RedisHubSocket(hub, opt)
   }
 
