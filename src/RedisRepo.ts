@@ -1,4 +1,4 @@
-import RedisHub from "./RedisHub"
+import RedisHub from "./RedisHub/RedisHub"
 
 export type EntityId = { id: string } | string
 

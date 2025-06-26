@@ -1,6 +1,7 @@
 import { describe, it, expect, afterAll } from "bun:test"
 import { sleep } from "bun"
-import WorkerRepo, { Worker, type IWorkerInfo, type WorkerStatus } from "../src/WorkerRepo"
+import WorkerRepo, { type IWorkerInfo, type WorkerStatus } from "../src/WorkerRepo"
+import { Worker } from "../src/Worker"
 
 const prefix = "__test__worker-repo__"
 
@@ -27,7 +28,7 @@ describe("WorkerRepo", () => {
       lastSeen: Date.now(),
       meta: { foo: "bar" },
     }
-    const worker = Worker.create(info, repo)
+    const worker = new Worker(info, i => repo.saveWorker(i))
     await worker.save()
     const loaded = await repo.getWorker(workerId)
     expect(loaded).toBeDefined()
@@ -47,7 +48,7 @@ describe("WorkerRepo", () => {
       status: "idle",
       lastSeen: Date.now(),
     }
-    const worker = Worker.create(info, repo)
+    const worker = new Worker(info, i => repo.saveWorker(i))
     await worker.save()
     await worker.setStatus("busy")
     let loaded = await repo.getWorker(workerId)
@@ -63,8 +64,8 @@ describe("WorkerRepo", () => {
     // Test listing multiple workers after saving them
     const repo = await WorkerRepo.createRepo({ prefix })
     // Add two workers
-    const w1 = Worker.create({ id: crypto.randomUUID() as string, name: "w1", status: "idle", lastSeen: Date.now() }, repo)
-    const w2 = Worker.create({ id: crypto.randomUUID() as string, name: "w2", status: "busy", lastSeen: Date.now() }, repo)
+    const w1 = new Worker({ id: crypto.randomUUID() as string, name: "w1", status: "idle", lastSeen: Date.now() }, i => repo.saveWorker(i))
+    const w2 = new Worker({ id: crypto.randomUUID() as string, name: "w2", status: "busy", lastSeen: Date.now() }, i => repo.saveWorker(i))
     await w1.save()
     await w2.save()
     const workers = await repo.listWorkers()
@@ -77,8 +78,8 @@ describe("WorkerRepo", () => {
     // Test retrieving all workers as Worker class instances
     const repo = await WorkerRepo.createRepo({ prefix })
     // Add two workers
-    const w1 = Worker.create({ id: crypto.randomUUID() as string, name: "w1", status: "idle", lastSeen: Date.now() }, repo)
-    const w2 = Worker.create({ id: crypto.randomUUID() as string, name: "w2", status: "busy", lastSeen: Date.now() }, repo)
+    const w1 = new Worker({ id: crypto.randomUUID() as string, name: "w1", status: "idle", lastSeen: Date.now() }, i => repo.saveWorker(i))
+    const w2 = new Worker({ id: crypto.randomUUID() as string, name: "w2", status: "busy", lastSeen: Date.now() }, i => repo.saveWorker(i))
     await w1.save()
     await w2.save()
     const workers = await repo.getAllWorkers()

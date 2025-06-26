@@ -1,4 +1,4 @@
-import RedisHub, { type RedisCacheEvent } from "./RedisHub"
+import RedisHub, { type RedisCacheEvent } from "./RedisHub/RedisHub"
 import RedisRepo, { type EntityId } from "./RedisRepo"
 
 // Debug utility

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test"
 import { sleep } from "bun"
-import { RedisHubSocket } from "../src/RedisHubSocket"
+import { RedisHubSocket } from "../src/RedisHub/RedisHubSocket"
 
 const PORT = 34567
 const WS_URL = `ws://localhost:${PORT}`

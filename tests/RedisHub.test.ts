@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll, beforeAll } from "bun:test"
-import RedisHub from "../src/RedisHub"
+import RedisHub from "../src/RedisHub/RedisHub"
 import { sleep } from "bun"
 
 const prefix = "__test__redis-hub__"

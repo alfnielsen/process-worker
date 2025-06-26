@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "bun:test"
 import { sleep } from "bun"
-import ActionRepo, { ActionRequest, type IActionObjectAny } from "../src/ActionRepo"
+import ActionRepo, { type IActionObjectAny } from "../src/Action/ActionRepo"
+import type { ActionRequest } from "../src/Action/ActionRequest"
 
 const prefix = "__test__action-repo__"
 

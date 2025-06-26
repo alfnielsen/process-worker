@@ -1,5 +1,6 @@
-import RedisHub from "./RedisHub"
+import RedisHub from "./RedisHub/RedisHub"
 import RedisRepo, { type EntityId } from "./RedisRepo"
+import { Worker } from "./Worker"
 
 /**
  * WorkerRepo: Manages worker metadata and status in Redis.
@@ -87,62 +88,8 @@ export class WorkerRepo extends RedisRepo {
    */
   async getAllWorkers(): Promise<Worker[]> {
     const infos = await this.listWorkers()
-    return infos.map(info => Worker.create(info, this))
-  }
-}
-
-export class Worker implements IWorkerInfo {
-  id: string
-  name: string
-  status: WorkerStatus
-  lastSeen: number
-  meta?: Record<string, any>
-  private _repo: WorkerRepo
-
-  constructor(info: IWorkerInfo, repo: WorkerRepo) {
-    this.id = info.id
-    this.name = info.name
-    this.status = info.status
-    this.lastSeen = info.lastSeen
-    this.meta = info.meta
-    this._repo = repo
-  }
-
-  get repo(): WorkerRepo {
-    return this._repo
-  }
-    
-    get json(): IWorkerInfo {
-    return {
-      id: this.id,
-      name: this.name,
-      status: this.status,
-        lastSeen: this.lastSeen,      
-        meta: this.meta || {}
-    }
-  }
-
-  // Save the worker info to Redis
-  async save(): Promise<void> {
-    await this.repo.saveWorker(this.json)
-  }
-
-  // Update the status and save
-  async setStatus(status: WorkerStatus): Promise<void> {
-    this.status = status
-    this.lastSeen = Date.now()
-    await this.save()
-  }
-
-  // Update the heartbeat (lastSeen)
-  async heartbeat(): Promise<void> {
-    this.lastSeen = Date.now()
-    await this.save()
-  }
-
-  // Static factory method
-  static create(info: IWorkerInfo, repo: WorkerRepo): Worker {
-    return new Worker(info, repo)
+    // Pass a saveWorker function to each Worker instance
+    return infos.map(info => new Worker(info, (i) => this.saveWorker(i)))
   }
 }
 

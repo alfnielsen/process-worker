@@ -147,7 +147,6 @@ export class ProcessWorker {
 //   case EVENT_DEL:
 //     console.log('Key "' + key + '" deleted!');
 //     break;
-//   }
 // });
 
 // client.subscribe(EVENT_SET, EVENT_DEL);
