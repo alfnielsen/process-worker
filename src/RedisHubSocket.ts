@@ -1,5 +1,10 @@
 import RedisHub from "./RedisHub"
 
+// Debug utility
+const debug = (...args: any[]) => {
+  if (process.env.DEBUG) console.log(...args)
+}
+
 export type Message = {
   type: string // The type of message (e.g., "listen", "publish", "getVal", etc.)
   response?: boolean // Indicates if this is a response to a request

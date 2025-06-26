@@ -1,6 +1,11 @@
 import RedisHub, { type RedisCacheEvent } from "./RedisHub"
 import RedisRepo, { type EntityId } from "./RedisRepo"
 
+// Debug utility
+const debug = (...args: any[]) => {
+  if (process.env.DEBUG) console.log(...args)
+}
+
 export type LogId = { id: string } | string
 
 type ILogObject<TData = any> = {

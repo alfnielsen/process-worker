@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test"
 import { sleep } from "bun"
-import { RedisHubSocket } from "../../src/RedisHubSocket"
-import { RedisHubSocketClient } from "../../src/RedisHubSocketClient"
+import { RedisHubSocket } from "../src/RedisHubSocket"
+import { RedisHubSocketClient } from "../src/RedisHubSocketClient"
 
 const PORT = 34568
 const WS_URL = `ws://localhost:${PORT}`
@@ -9,7 +9,7 @@ const WS_URL = `ws://localhost:${PORT}`
 describe("RedisHubSocketClient integration", () => {
   let server: any
   beforeAll(async () => {
-    const hubSocket = new RedisHubSocket({ prefix: "__test__redis-hub-socket-client__" })
+    const hubSocket = await RedisHubSocket.createHub({ prefix: "__test__redis-hub-socket-client__" })
     server = await hubSocket.listen({ port: PORT })
     await sleep(50)
   })

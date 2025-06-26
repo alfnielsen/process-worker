@@ -1,23 +1,20 @@
 import { describe, it, expect, afterAll, beforeAll } from "bun:test"
-import RedisHub from "../../src/RedisHub"
+import RedisHub from "../src/RedisHub"
 import { sleep } from "bun"
 
 const prefix = "__test__redis-hub__"
 let redisHub: RedisHub
 
-beforeAll(async () => {
-  redisHub = await RedisHub.createHub({ prefix })
-})
-
-afterAll(async () => {
-  // Clean up test keys
-  await redisHub.delKeys(`${prefix}*`, true)
-  console.log("Test keys deleted")
-  //await redisHub.quit()
-  console.log("Buy! RedisHub instance")
-})
 
 describe("RedisHub", () => {
+  beforeAll(async () => {
+    redisHub = await RedisHub.createHub({ prefix })
+  })
+  
+  afterAll(async () => {
+    // Clean up test keys
+    await redisHub.delKeys(`${prefix}*`, true)
+  })
 
   it("should create a RedisHub instance", () => {
     expect(redisHub).toBeDefined()

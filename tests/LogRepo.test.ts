@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test"
 import { sleep } from "bun"
-import LogRepo, { LogRequest } from "../../src/LogRepo"
+import LogRepo, { LogRequest } from "../src/LogRepo"
 
 const prefix = "__test__log-repo__"
 let repo: LogRepo

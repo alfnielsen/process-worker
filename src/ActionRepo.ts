@@ -231,6 +231,11 @@ export class ActionRequest<
   }
 }
 
+// Debug utility
+const debug = (...args: any[]) => {
+  if (process.env.DEBUG) console.log(...args)
+}
+
 export class ActionRepo extends RedisRepo {
   static override async createRepo(opt: {
     prefix?: string,
@@ -255,7 +260,7 @@ export class ActionRepo extends RedisRepo {
   getActionStoreKey(action: EntityId, type: string = "request") {
     const id = this.getEntityId(action)
     const key = `${this.baseKey}:${id}:${type}`
-    console.log(`[ActionRepo.getActionStoreKey] id: ${id}, type: ${type}, key: ${key}`)
+    //console.log(`[ActionRepo.getActionStoreKey] id: ${id}, type: ${type}, key: ${key}`)
     return key
   }
    getActionRequestQueueKey(action: EntityId): string {
@@ -326,12 +331,12 @@ export class ActionRepo extends RedisRepo {
     TOutput extends object | undefined = undefined,
   >(id: EntityId, restore = false): Promise<ActionRequest<TArg, TData, TError, TOutput> | undefined> {
     const storeKey = this.getActionStoreKey(id)
-    console.log("[ActionRepo.loadAction] storeKey:", storeKey)
+    debug("[ActionRepo.loadAction] storeKey:", storeKey)
     const directVal = await this.hub.redis.get(storeKey)
-    console.log("[ActionRepo.loadAction] direct redis.get:", directVal)
+    debug("[ActionRepo.loadAction] direct redis.get:", directVal)
     // Use getRawVal to get the raw string, then parse
     const rawValue = await this.hub.getRawVal(storeKey)
-    console.log("[ActionRepo.loadAction] value from hub.getRawVal:", rawValue)
+    debug("[ActionRepo.loadAction] value from hub.getRawVal:", rawValue)
     if (!rawValue) {
       return undefined
     }
@@ -353,14 +358,14 @@ export class ActionRepo extends RedisRepo {
       throw new Error("Action object must have an 'id' property")
     }
     const storeKey = this.getActionStoreKey(action)
-    console.log("[ActionRepo.saveAction] storeKey:", storeKey)
+    debug("[ActionRepo.saveAction] storeKey:", storeKey)
     const serialized = JSON.stringify(action.jsonWithEvents)
-    console.log("[ActionRepo.saveAction] serialized:", serialized)
+    debug("[ActionRepo.saveAction] serialized:", serialized)
     await this.hub.setVal(storeKey, action.jsonWithEvents)
     const verify = await this.hub.getVal(storeKey)
-    console.log("[ActionRepo.saveAction] verify getVal:", verify)
+    debug("[ActionRepo.saveAction] verify getVal:", verify)
     const directVal = await this.hub.redis.get(storeKey)
-    console.log("[ActionRepo.saveAction] direct redis.get:", directVal)
+    debug("[ActionRepo.saveAction] direct redis.get:", directVal)
   }
 
 
@@ -393,7 +398,7 @@ export class ActionRepo extends RedisRepo {
     if (!id) {
       throw new Error("Action ID is required to publish an event")
     }
-    console.log("[ActionRepo.publishToRequestQueue] queueKey:", this.queueKey)
+    debug("[ActionRepo.publishToRequestQueue] queueKey:", this.queueKey)
     await this.hub.publish(this.queueKey, "action", action.json)
   }
 
@@ -401,9 +406,9 @@ export class ActionRepo extends RedisRepo {
     eventListener: ActionQueueEventHandler
   ): void {
     const storeKey = this.queueKey
-     console.log(`Listening to action request queue: ${storeKey}`)
+    debug(`Listening to action request queue: ${storeKey}`)
     this.hub.listen(storeKey, async (event) => {
-       console.log(`[ActionRepo.listenToRequestQueue] Received event: ${JSON.stringify(event)}`)
+      debug(`[ActionRepo.listenToRequestQueue] Received event: ${JSON.stringify(event)}`)
       const action = event.data as IActionObjectAny
       eventListener(action)
       return true // Continue listening

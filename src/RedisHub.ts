@@ -1,5 +1,10 @@
 import Redis from "ioredis"
 
+// Debug utility
+const debug = (...args: any[]) => {
+  if (process.env.DEBUG) console.log(...args)
+}
+
 export type RedisCacheEvent = {
   id: string
   type: string
@@ -22,18 +27,12 @@ export default class RedisHub {
     }
     // Wait for Redis to be ready
     await instance.waitReady()
-    if (process.env.DEBUG) {
-      console.log(`[RedisHub.createHub] RedisHub instance created with prefix: '${instance.prefix}'`)
-    }
+    debug(`[RedisHub.createHub] RedisHub instance created with prefix: '${instance.prefix}'`)
     // Return the instance
-    if (process.env.DEBUG) {
-      console.log(`[RedisHub.createHub] RedisHub instance created: ${JSON.stringify(instance)}`)
-    }
+    debug(`[RedisHub.createHub] RedisHub instance created: ${JSON.stringify(instance)}`)
     if (opt.prefix) {
       instance.prefix = opt.prefix
-      if (process.env.DEBUG) {
-        console.log(`[RedisHub.createHub] RedisHub prefix set to: '${instance.prefix}'`)
-      }
+      debug(`[RedisHub.createHub] RedisHub prefix set to: '${instance.prefix}'`)
     }
     return instance
   }
@@ -100,9 +99,7 @@ export default class RedisHub {
     // return unsubscribe
     return () => {
       sub.unsubscribe(stream)
-      if (process.env.DEBUG) {
-        console.log(`[RedisHub.listen] Unsubscribed from stream: ${stream}`)
-      }
+      debug(`[RedisHub.listen] Unsubscribed from stream: ${stream}`)
     }
 
   }
@@ -131,17 +128,16 @@ export default class RedisHub {
     if (ignorePrefix || !this.prefix) return key
     // Always add a colon between prefix and key
     const k = `${this.prefix.endsWith(":") ? this.prefix : this.prefix + ":"}${key}`
-    // Debug log
-    if (process.env.DEBUG || true) console.log(`[RedisHub.key] prefix: '${this.prefix}', key: '${key}', result: '${k}'`)
+    debug(`[RedisHub.key] prefix: '${this.prefix}', key: '${key}', result: '${k}'`)
     return k
   }
 
   async quit() {
-    console.log("[RedisHub.quit] Quitting RedisHub...")
+    debug("[RedisHub.quit] Quitting RedisHub...")
     await this.sub?.quit()
-    console.log("[RedisHub.quit] Subscriber connection closed.")
+    debug("[RedisHub.quit] Subscriber connection closed.")
     await this.redis?.quit()
-    console.log("[RedisHub.quit] Redis connection closed.")
+    debug("[RedisHub.quit] Redis connection closed.")
     await this.pub?.quit()
   }
 
@@ -231,9 +227,7 @@ export default class RedisHub {
     }
     await this._waitReady(this.redis)
     await this._waitReady(this.pub)
-    if (process.env.DEBUG) {
-      console.log(`[RedisHub.waitReady] RedisHub is ready with prefix: '${this.prefix}'`)
-    }
+    debug(`[RedisHub.waitReady] RedisHub is ready with prefix: '${this.prefix}'`)
   }
 
   private async _waitReady(repo: any) {
@@ -249,9 +243,7 @@ export default class RedisHub {
         }
       } catch (e) {
         await Bun.sleep(100)
-        if (process.env.DEBUG) {
-          console.warn(`[RedisHub.waitReady] Attempt ${i + 1}: Redis not ready yet, retrying...`)
-        }
+        debug(`[RedisHub.waitReady] Attempt ${i + 1}: Redis not ready yet, retrying...`)
       }
     }
     if (!ready) throw new Error("Redis connection not ready")
