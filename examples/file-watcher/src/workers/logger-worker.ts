@@ -1,4 +1,5 @@
-import { ProcessWorker } from '../../../../src/ProcessWorker';
+import { ProcessWorker } from "redis-process-worker"
+
 
 const w = await ProcessWorker.start("__logger-worker");
 

@@ -1,12 +1,18 @@
 {
   "name": "redis-process-worker",
   "description": "A worker process helper for using redis cache and streams.",
-  "version": "0.0.1beta",
+  "version": "0.0.1009-beta",
   "module": "src/ProcessWorker.ts",
+  "main": "dist/ProcessWorker.js",
+  "types": "dist/types/index.d.ts",
   "type": "module",
-  "private": true,
   "scripts": {
-    "build": "bun build src/ProcessWorker.ts --outdir dist --target node"
+    "dev:patch": "bun run ./dev-scripts/use-patch-in-example.worker.ts",
+    "build": "bun run build:main && bun run build:declaration",
+    "build:main": "bun build ./src/*.ts ./src/**/*.ts --outdir dist --external=redis",
+    "build:declaration": "tsc --emitDeclarationOnly --declaration --declarationMap --project tsconfig.types.json",
+    "pub:beta": "npm publish --tag beta",
+    "pub": "npm publish"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -15,5 +21,31 @@
   "peerDependencies": {
     "typescript": "^5",
     "redis": "^5.5.6"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/ProcessWorker.js",
+      "require": "./dist/ProcessWorker.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server/server-connector.js",
+      "require": "./dist/server/server-connector.js",
+      "types": "./dist/types/server/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/client-connector.js",
+      "require": "./dist/client/client-connector.js",
+      "types": "./dist/types/client/index.d.ts"
+    },
+    "./msgtype": {
+      "import": "./dist/shared/MsgType.js",
+      "require": "./dist/shared/MsgType.js",
+      "types": "./dist/types/shared/index.d.ts"
+    }
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ioredis": "^5.6.1"
   }
 }

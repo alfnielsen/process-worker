@@ -1,32 +1,30 @@
 import { describe, it, expect } from "bun:test"
-import { handleWebSocketMessage } from "../connectors/frontend-websocket-connector-bun"
-import { MsgType } from "../connectors/MsgType"
-import { ProcessWorker } from "../ProcessWorker"
+import { ServerConnector } from "../src/server-connector"
+import { MsgType } from "../src/MsgType"
+import { ProcessWorker } from "../src/ProcessWorker"
 
-describe("handleWebSocketMessage", () => {
+describe("ServerConnector.handleWebSocketMessage", () => {
   function makeRequestId(type: string) {
     return type + "-" + Math.random().toString(36).slice(2)
   }
 
   it("should handle set and get", async () => {
     const sent: any[] = []
-    const worker = await ProcessWorker.start("__test-worker");
+    const connector = await ServerConnector.start(0, { workerName: "__test-worker" }, false)
     // set
     const setRequestId = makeRequestId("set")
-    await handleWebSocketMessage(
-      msg => sent.push(msg),
+    await connector.handleWebSocketMessage(
+      (msg: any) => sent.push(msg),
       { type: MsgType.SET, key: "foo", value: 42, requestId: setRequestId },
-      undefined,
-      worker
+      new Map()
     )
     expect(sent[sent.length-1]).toEqual({ type: MsgType.SET, key: "foo", requestId: setRequestId, status: "ok" })
     // get
     const getRequestId = makeRequestId("get")
-    await handleWebSocketMessage(
-      msg => sent.push(msg),
+    await connector.handleWebSocketMessage(
+      (msg: any) => sent.push(msg),
       { type: MsgType.GET, key: "foo", requestId: getRequestId },
-      undefined,
-      worker
+      new Map()
     )
     expect(sent[sent.length-1]).toEqual({ type: MsgType.GET, key: "foo", requestId: getRequestId, status: "ok", value: 42 })
   })
@@ -34,16 +32,14 @@ describe("handleWebSocketMessage", () => {
   it("should handle on and post", async () => {
     const sentMessages: any[] = []
     const listeners = new Map<string, (msg: any) => void>()
-    const worker = await ProcessWorker.start("__test-worker");
+    const connector = await ServerConnector.start(0, { workerName: "__test-worker" }, false)
     const stream = "test-stream"
     const onRequestId = makeRequestId("on")
-
-    // 
-    await handleWebSocketMessage(
-      msg => sentMessages.push(msg),
+    // listen
+    await connector.handleWebSocketMessage(
+      (msg: any) => sentMessages.push(msg),
       { type: MsgType.LISTEN, stream, requestId: onRequestId },
-      listeners,
-      worker
+      listeners
     )
     expect(sentMessages[sentMessages.length - 1]).toEqual({
       type: MsgType.LISTEN,
@@ -53,37 +49,33 @@ describe("handleWebSocketMessage", () => {
     })
     // post
     const postRequestId = makeRequestId("post")
-    await handleWebSocketMessage(
-      msg => sentMessages.push(msg),
+    await connector.handleWebSocketMessage(
+      (msg: any) => sentMessages.push(msg),
       { type: MsgType.POST, stream, data: { foo: "bar" }, requestId: postRequestId },
-      listeners,
-      worker
-    ) 
-    
-    
+      listeners
+    )
+    // No assertion for post, as it depends on listeners
   })
 
   it("should handle unlisten (unsubscribe)", async () => {
     const sent: any[] = []
     const listeners = new Map<string, (msg: any) => void>()
     const worker = await ProcessWorker.start("__test-worker");
+    const connector = await ServerConnector.start(0, { workerName: "__test-worker" }, false)
     const stream = "test-unlisten-stream"
     const onRequestId = crypto.randomUUID()
     const listenerKey = `${MsgType.LISTEN}:${stream}:${onRequestId}`
     // Listen first
-    await handleWebSocketMessage(
-      msg => sent.push(msg),
+    await connector.handleWebSocketMessage(
+      (msg: any) => sent.push(msg),
       { type: MsgType.LISTEN, stream, requestId: onRequestId },
-      listeners,
-      worker
+      listeners
     )
-
     expect(listeners.has(listenerKey)).toBe(true)
-    await handleWebSocketMessage(
-      msg => sent.push(msg),
+    await connector.handleWebSocketMessage(
+      (msg: any) => sent.push(msg),
       { type: MsgType.UNLISTEN, stream, requestId: onRequestId },
-      listeners,
-      worker
+      listeners
     )
     expect(listeners.has(listenerKey)).toBe(false)
     worker.shutdown()

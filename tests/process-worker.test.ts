@@ -34,7 +34,7 @@ describe("ProcessWorker", () => {
   it("should post and receive messages on a stream", async () => {
     const worker = await ProcessWorker.start({ workerName: "test-worker-stream", logStdout: false, postStatusLogInterval: 0 })
     const got: any[] = []
-    const streamName = `test-stream-${Date.now()}`
+    const streamName = `test-stream:test-stream-${Date.now()}`
     await sleep(100)
     worker.on(streamName, msg => {
       got.push(msg)

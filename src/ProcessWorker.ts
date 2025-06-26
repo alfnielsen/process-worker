@@ -14,7 +14,7 @@ export interface ProcessWorkerOptions {
   /**
    * The name of the worker, used for logging and identification.
    */
-  workerName: string
+  workerName?: string
   /**
    * Whether to log messages to stdout.
    * Default is false.
@@ -91,7 +91,7 @@ export class ProcessWorker {
    * @param options Configuration options for the worker.
    */
   private constructor(options: ProcessWorkerOptions) {
-    this.workerName = options.workerName
+    this.workerName = options.workerName || `worker-${crypto.randomUUID()}`
     this.logStdout = options.logStdout ?? false
     this.postStatusLogInterval = options.postStatusLogInterval ?? 10
     this.statusData = options.statusData
@@ -124,6 +124,33 @@ export class ProcessWorker {
     }
     return worker
   }
+
+  async onEvent(
+    type: "set" | "del" | "expired" | "evicted" | "rename_from" | "rename_to" | "expire",
+    callback: (value: any) => void
+  ){
+    const subscriber = this.subscriber
+    if (!this._started || !subscriber) throw new Error("Worker not started")
+      const dbIndex = 0 // Assuming default DB index is 0, adjust if needed
+    const notificationChannel = `__keyspace@${dbIndex}__:*`
+    await subscriber.subscribe(notificationChannel, (channel, notificationType) => {
+      const key = channel.split(":")[2]
+      console.log(`Received notification: [${channel}] ${notificationType} for key: ${key}`)
+      callback(key)
+    })
+
+  }
+
+
+//     console.log('Key "' + key + '" set!');
+//     break;
+//   case EVENT_DEL:
+//     console.log('Key "' + key + '" deleted!');
+//     break;
+//   }
+// });
+
+// client.subscribe(EVENT_SET, EVENT_DEL);
     
   
   /**
@@ -179,14 +206,15 @@ export class ProcessWorker {
     key: string,
     value: T
   ): Promise<void> {
-    if (!this._started) throw new Error("Worker not started")
+    if (!this._started || !this.redis) throw new Error("Worker not started")
     let storeValue: string
     if (typeof value === "object" && value !== null) {
       storeValue = JSON.stringify(value)
     } else {
       storeValue = String(value)
     }
-    await this.redis?.set(key, storeValue)
+    console.log(`Setting key "${key}" with value:`, storeValue)
+    await this.redis.set(key, storeValue)
   }
 
   /**
@@ -196,10 +224,14 @@ export class ProcessWorker {
     if (this._started) return
     this.redis = createClient()
     this.subscriber = createClient()
+    // Enable keyspace notifications for subscribing to key events (keys + expiration)
+    // https://redis.io/docs/latest/develop/use/keyspace-notifications/
     await Promise.all([
       this.redis.connect(),
       this.subscriber.connect()
     ])
+    await this.subscriber.configSet("notify-keyspace-events", "Ex");
+
     this.redis.on("error", (err: any) => {
       this.log(`Redis error: ${err.message}`, { error: err.message })
     })

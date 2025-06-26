@@ -1,6 +1,6 @@
 import { watch } from "fs"
-import { ProcessWorker } from "../../../../src/ProcessWorker"
 import { join } from "path"
+import { ProcessWorker } from "redis-process-worker"
 
 const w = await ProcessWorker.start("__watch-worker")
 const path = join(import.meta.dirname, "..", "watched-directory")
