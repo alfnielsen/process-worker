@@ -1,5 +1,7 @@
 # redis-process-worker
 
+> **Disclaimer:** This package is in developer beta and its API or features may change at any time.
+
 A worker process helper for using Redis cache and streams. Provides a simple interface for background workers, stream communication, and a global cache.
 
 ## Features
