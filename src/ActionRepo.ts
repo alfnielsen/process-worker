@@ -1,6 +1,5 @@
 import RedisHub, { type RedisCacheEvent } from "./RedisHub"
-
-export type ActionId = { id: string } | string
+import RedisRepo, { type EntityId } from "./RedisRepo"
 
 export type IActionObject<
   TArg extends object,
@@ -232,53 +231,35 @@ export class ActionRequest<
   }
 }
 
-export class ActionRepo {
-  baseKey = "action"
-  queueKey = "actionQueue"
-  hub = RedisHub.createHub()
-
+export class ActionRepo extends RedisRepo {
   static createRepo(opt: {
     prefix?: string,
     baseKey?: string,
     queueKey?: string,
   } = {}): ActionRepo {
-    const repo = new ActionRepo()
-    repo.hub.prefix = repo.baseKey
-    if (opt.prefix) {
-      repo.hub.prefix = opt.prefix
-    }
-    if (opt.baseKey) {
-      repo.baseKey = opt.baseKey
-    }
-    return new ActionRepo()
+    return new ActionRepo(opt)
   }
 
-  private constructor() {
-    // Initialize the ActionRepo with a RedisHub instance
+  constructor(opt: {
+    prefix?: string,
+    baseKey?: string,
+    queueKey?: string,
+  } = {}) {
+    super(opt)
   }
 
   // Redis keys for action data
-   getActionStoreKey(action: ActionId, type: string = "request") {
-    const id = this.getActionId(action)
-    return `${this.baseKey}:${id}:${type}`
+  getActionStoreKey(action: EntityId, type: string = "request") {
+    const id = this.getEntityId(action)
+    const key = `${this.baseKey}:${id}:${type}`
+    console.log(`[ActionRepo.getActionStoreKey] id: ${id}, type: ${type}, key: ${key}`)
+    return key
   }
-   getActionRequestQueueKey(action: ActionId): string {
-    const id = this.getActionId(action)
+   getActionRequestQueueKey(action: EntityId): string {
+    const id = this.getEntityId(action)
     return `${this.queueKey}`
     //return `${this.queueKey}:${id}`
   }
-   getActionId(action: ActionId): string {
-    if (typeof action === "string") {
-      if (!action) {
-        throw new Error("Action ID cannot be an empty string")
-      }
-      return action
-    }
-    if (!action.id) {
-      throw new Error("Action object must have an 'id' property")
-    }
-    return action.id
-   }
   
   create<
     TArg extends object,
@@ -288,7 +269,8 @@ export class ActionRepo {
   >(
     opt: { name: string } & Partial<IActionObject<TArg, TData, TError, TOutput>>,    
   ): ActionRequest<TArg, TData, TError, TOutput> {
-    return ActionRequest.create<TArg, TData, TError, TOutput>(opt)    
+    // Always pass 'this' as the repo
+    return ActionRequest.create<TArg, TData, TError, TOutput>(opt, this)
   }
 
   fromJSON<
@@ -339,12 +321,18 @@ export class ActionRepo {
     TData extends object = object,
     TError extends object | undefined = undefined,
     TOutput extends object | undefined = undefined,
-  >(id: ActionId, restore = false): Promise<ActionRequest<TArg, TData, TError, TOutput> | undefined> {
+  >(id: EntityId, restore = false): Promise<ActionRequest<TArg, TData, TError, TOutput> | undefined> {
     const storeKey = this.getActionStoreKey(id)
-    const value = await this.hub.getVal(storeKey)
-    if (!value) {
+    console.log("[ActionRepo.loadAction] storeKey:", storeKey)
+    const directVal = await this.hub.redis.get(storeKey)
+    console.log("[ActionRepo.loadAction] direct redis.get:", directVal)
+    // Use getRawVal to get the raw string, then parse
+    const rawValue = await this.hub.getRawVal(storeKey)
+    console.log("[ActionRepo.loadAction] value from hub.getRawVal:", rawValue)
+    if (!rawValue) {
       return undefined
     }
+    const value = JSON.parse(rawValue)
     const action = this.fromJSON<TArg, TData, TError, TOutput>(value)
     if (restore) {
       await action.restoreAll()
@@ -362,7 +350,14 @@ export class ActionRepo {
       throw new Error("Action object must have an 'id' property")
     }
     const storeKey = this.getActionStoreKey(action)
+    console.log("[ActionRepo.saveAction] storeKey:", storeKey)
+    const serialized = JSON.stringify(action.jsonWithEvents)
+    console.log("[ActionRepo.saveAction] serialized:", serialized)
     await this.hub.setVal(storeKey, action.jsonWithEvents)
+    const verify = await this.hub.getVal(storeKey)
+    console.log("[ActionRepo.saveAction] verify getVal:", verify)
+    const directVal = await this.hub.redis.get(storeKey)
+    console.log("[ActionRepo.saveAction] direct redis.get:", directVal)
   }
 
 
@@ -371,8 +366,8 @@ export class ActionRepo {
    * @param eventType
    * @param data
    */
-   async publish(action: ActionId, eventType: string, data: object): Promise<void> {
-    const id = this.getActionId(action)
+   async publish(action: EntityId, eventType: string, data: object): Promise<void> {
+    const id = this.getEntityId(action)
     if (!id) {
       throw new Error("Action ID is required to publish an event")
     }
@@ -391,10 +386,11 @@ export class ActionRepo {
     TError extends object | undefined = undefined,
     TOutput extends object | undefined = undefined,
     >(action: ActionRequest<TArg, TData, TError, TOutput>): Promise<void> {
-    const id = this.getActionId(action)
+    const id = this.getEntityId(action)
     if (!id) {
       throw new Error("Action ID is required to publish an event")
     }
+    console.log("[ActionRepo.publishToRequestQueue] queueKey:", this.queueKey)
     await this.hub.publish(this.queueKey, "action", action.json)
   }
 
@@ -404,7 +400,7 @@ export class ActionRepo {
     const storeKey = this.queueKey
      console.log(`Listening to action request queue: ${storeKey}`)
     this.hub.listen(storeKey, async (event) => {
-       console.log(`Received action request event: ${JSON.stringify(event)}`)
+       console.log(`[ActionRepo.listenToRequestQueue] Received event: ${JSON.stringify(event)}`)
       const action = event.data as IActionObjectAny
       eventListener(action)
       return true // Continue listening
@@ -416,21 +412,33 @@ export class ActionRepo {
     await this.hub.delKey(storeKey)
   }
 
-   listen(action: ActionId, eventListener: ActionEventHandler): void {
+   listen(action: EntityId, eventListener: ActionEventHandler): void {
     const storeKey = this.getActionStoreKey(action, "events")
     this.hub.listen(storeKey, eventListener)
   }
 
-   async getVal<T>(action: ActionId, type: string): Promise<T | undefined> {
+   async getVal<T>(action: EntityId, type: string): Promise<T | undefined> {
     const storeKey = this.getActionStoreKey(action, type)
     const value = await this.hub.getVal<T>(storeKey)
     return value
   }
 
-   async setVal(action: ActionId, type: string, value: any): Promise<void> {
+   async setVal(action: EntityId, type: string, value: any): Promise<void> {
     const storeKey = this.getActionStoreKey(action, type)
     await this.hub.setVal(storeKey, value)
   }
+}
+
+// Placeholder for LogRepo, assuming similar structure
+export class LogRepo extends RedisRepo {
+  constructor(opt: {
+    prefix?: string,
+    baseKey?: string,
+    queueKey?: string,
+  } = {}) {
+    super(opt)
+  }
+  // ...LogRepo-specific methods...
 }
 
 export default ActionRepo
