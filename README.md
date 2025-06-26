@@ -54,12 +54,6 @@ import { startFrontendWebSocketConnector } from "redis-process-worker/server"
 import { FrontendWebSocketConnectorClient } from "redis-process-worker/client"
 ```
 
-#### Message Types
-
-```ts
-import { type MsgType } from "redis-process-worker/msgtype"
-```
-
 ## License
 
 MIT
