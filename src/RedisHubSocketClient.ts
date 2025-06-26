@@ -1,4 +1,3 @@
-import { request } from "http"
 
 export type Message = {
   type: string // The type of message (e.g., "listen", "publish", "getVal", etc.)

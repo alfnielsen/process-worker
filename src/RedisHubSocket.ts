@@ -1,4 +1,3 @@
-import { request } from "http"
 import RedisHub from "./RedisHub"
 
 export type Message = {

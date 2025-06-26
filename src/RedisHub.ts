@@ -84,23 +84,8 @@ export default class RedisHub {
       RedisHub.redis = new Redis()
     }
     this._sub = new Redis() // Use the same Redis instance for subscribing
-    // if (!RedisHub.sub) {
-    //   RedisHub.sub = new Redis({
-    //     //keyPrefix: opt.prefix || this.prefix,
-    //     // Use a separate Redis instance for subscribing
-    //     // to avoid blocking the main Redis instance
-    //     // connectionName: "RedisHubSub",
-    //     // lazyConnect: true, // Lazy connect to avoid immediate connection
-    //   })
-    // }
     if (!RedisHub.pub) {
-      RedisHub.pub = new Redis({
-        //keyPrefix: opt.prefix || this.prefix,
-        // // Use the same Redis instance for publishing
-        // // to avoid multiple connections
-        // connectionName: "RedisHubPub",
-        // lazyConnect: true, // Lazy connect to avoid immediate connection
-      })
+      RedisHub.pub = new Redis() // Use a separate instance for publishing
     }
   }
   get redis() {
@@ -114,7 +99,12 @@ export default class RedisHub {
   }
 
   private key(key: string, ignorePrefix: boolean = false) {
-    return (ignorePrefix ? "" : this.prefix) + key
+    if (ignorePrefix || !this.prefix) return key
+    // Always add a colon between prefix and key
+    const k = `${this.prefix.endsWith(":") ? this.prefix : this.prefix + ":"}${key}`
+    // Debug log
+    if (process.env.DEBUG || true) console.log(`[RedisHub.key] prefix: '${this.prefix}', key: '${key}', result: '${k}'`)
+    return k
   }
 
   async quit() {
