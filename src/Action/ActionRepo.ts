@@ -1,4 +1,4 @@
-import RedisHub from "../RedisHub/RedisHub"
+import {RedisHub} from "../RedisHub/RedisHub"
 import RedisRepo, { type EntityId } from "../RedisRepo/RedisRepo"
 import { ActionRequest } from "./ActionRequest"
 import createDebug from "debug"
@@ -6,7 +6,7 @@ import type { IActionObject, IActionObjectAny, IActionObjectWithEvents, ActionEv
 const debug = createDebug("ActionRepo")
 
 export class ActionRepo extends RedisRepo {
-  static override async createRepo(opt: {
+  static  async createActionRepo(opt: {
     prefix?: string,
     baseKey?: string,
     queueKey?: string,

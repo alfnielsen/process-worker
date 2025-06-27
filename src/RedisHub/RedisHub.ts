@@ -6,7 +6,7 @@ const debug = (...args: any[]) => {
   if (process.env.DEBUG) console.log(...args)
 }
 
-export default class RedisHub {
+export class RedisHub {
   protected static redis: Redis
   protected static pub: Redis
   prefix: string = ""
@@ -24,7 +24,6 @@ export default class RedisHub {
     await instance.waitReady()
     debug(`[RedisHub.createHub] RedisHub instance created with prefix: '${instance.prefix}'`)
     // Return the instance
-    debug(`[RedisHub.createHub] RedisHub instance created: ${JSON.stringify(instance)}`)
     if (opt.prefix) {
       instance.prefix = opt.prefix
       debug(`[RedisHub.createHub] RedisHub prefix set to: '${instance.prefix}'`)
@@ -56,10 +55,10 @@ export default class RedisHub {
     return result
   }
 
-  static listen(
+  static listen<TData extends object = object>(
     sub: Redis,
     stream: string,
-    handler: (event: IRedisCacheEvent) => void | boolean | Promise<void | boolean>
+    handler: (event: IRedisCacheEvent<TData>) => void | boolean | Promise<void | boolean>
   ) {
     let lastId = "$"
     const listenForNext = async () => {
@@ -79,7 +78,7 @@ export default class RedisHub {
           console.warn(`Invalid message format in stream ${stream}: ${JSON.stringify(messages)}`)
           continue
         }
-        const event: IRedisCacheEvent = { id, type, data: _data }
+        const event: IRedisCacheEvent<TData> = { id, type, data: _data }
         const response = handler(event)
         const stop = response instanceof Promise ? await response : response
         if (stop === false || event.type === "complete" || stop === true) {
@@ -189,14 +188,14 @@ export default class RedisHub {
     return keys
   }
 
-  listen(
+  listen<TData extends object = object>(
     stream: string,
     handler: (message: IRedisCacheEvent) => void | boolean | Promise<void | boolean>,
     ignorePrefix: boolean = false
   ) {
     const _key = this.key(stream, ignorePrefix)
     // Start listening for messages on the stream
-    return RedisHub.listen(
+    return RedisHub.listen<TData>(
       this._sub, // Use the subscriber instance
       _key,
       handler

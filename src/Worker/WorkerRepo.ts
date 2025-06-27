@@ -1,4 +1,4 @@
-import RedisHub from "../RedisHub/RedisHub"
+import {RedisHub} from "../RedisHub/RedisHub"
 import RedisRepo, { type EntityId } from "../RedisRepo/RedisRepo"
 import { Worker } from "./Worker"
 import type { WorkerStatus, IWorkerInfo } from "./IWorkerInfo"
@@ -8,9 +8,9 @@ import type { WorkerStatus, IWorkerInfo } from "./IWorkerInfo"
  * Stores and retrieves worker information, status, and heartbeats.
  */
 export class WorkerRepo extends RedisRepo {
-  static override async createRepo(opt: {
+  static async startWorker(opt: {
+    name?: string,
     prefix?: string,
-    baseKey?: string,
   } = {}): Promise<WorkerRepo> {
     const hub = await RedisHub.createHub({ prefix: opt.prefix })
     const repo = new WorkerRepo(hub, opt)

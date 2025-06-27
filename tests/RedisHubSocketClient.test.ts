@@ -2,20 +2,28 @@ import { describe, it, expect, beforeAll, afterAll } from "bun:test"
 import { sleep } from "bun"
 import { RedisHubSocket } from "../src/RedisHub/RedisHubSocket"
 import { RedisHubSocketClient } from "../src/RedisHub/RedisHubSocketClient"
+import { RedisHub } from "../src"
 
 const PORT = 34568
 const WS_URL = `ws://localhost:${PORT}`
+const prefix = "__test__redis-hub-socket-client__"
+
+
 
 describe("RedisHubSocketClient integration", () => {
   let server: any
   beforeAll(async () => {
-    const hubSocket = await RedisHubSocket.createHub({ prefix: "__test__redis-hub-socket-client__" })
+    const hubSocket = await RedisHubSocket.createHub({ prefix })
     server = await hubSocket.listen({ port: PORT })
     await sleep(50)
   })
   afterAll(async () => {
     server?.stop?.()
     await sleep(50)
+
+        // Clean up test keys
+        const redisHub = await RedisHub.createHub({ prefix })
+        await redisHub.delKeys(`${prefix}*`, true)
   })
 
   it("should connect and receive published messages", async () => {

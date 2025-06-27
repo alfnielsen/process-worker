@@ -1,4 +1,4 @@
-import RedisHub from "../RedisHub/RedisHub"
+import {RedisHub} from "../RedisHub/RedisHub"
 
 // EntityId can be a string or an object with an id property
 export type EntityId = { id: string } | string
@@ -26,7 +26,7 @@ export class RedisRepo {
    * Create a RedisRepo instance with optional baseKey and queueKey.
    * This also creates a RedisHub instance.
    */
-  static async createRepo(opt: {
+  static async createRedisRepo(opt: {
     prefix?: string,
     baseKey?: string,
     queueKey?: string,  

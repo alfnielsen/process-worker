@@ -1,18 +1,15 @@
 import { describe, it, expect } from "bun:test"
 import ActionRepo from "../src/Action/ActionRepo"
 import LogRepo from "../src/Log/LogRepo"
-import RedisHub from "../src/RedisHub/RedisHub"
-import { RedisHubSocket } from "../src/RedisHub/RedisHubSocket"
-import { RedisHubSocketClient } from "../src/RedisHub/RedisHubSocketClient"
+import {RedisHub} from "../src/RedisHub/RedisHub"
 import RedisRepo from "../src/RedisRepo/RedisRepo"
 import WorkerRepo from "../src/Worker/WorkerRepo"
-import { sleep } from "bun"
 
 // Note: These are illustrative tests matching the README examples. Adjust as needed for your actual API and test environment.
 
 describe("ActionRepo Example", () => {
   it("should create an action", async () => {
-    const repo = await ActionRepo.createRepo()
+    const repo = await ActionRepo.createActionRepo()
     const action = repo.create({
       name: "test-action",
       arg: { foo: "bar" },
@@ -25,7 +22,7 @@ describe("ActionRepo Example", () => {
 
 describe("LogRepo Example", () => {
   it("should create a LogRepo instance", async () => {
-    const repo = await LogRepo.createRepo()
+    const repo = await LogRepo.createLogger()
     expect(repo).toBeInstanceOf(LogRepo)
   })
 })
@@ -46,14 +43,14 @@ describe.skip("RedisHubSocket Example", () => {
 
 describe("RedisRepo Example", () => {
   it("should create a RedisRepo instance", async () => {
-    const repo = await RedisRepo.createRepo()
+    const repo = await RedisRepo.createRedisRepo()
     expect(repo).toBeInstanceOf(RedisRepo)
   })
 })
 
 describe("WorkerRepo Example", () => {
   it("should create a WorkerRepo instance", async () => {
-    const repo = await WorkerRepo.createRepo()
+    const repo = await WorkerRepo.startWorker()
     expect(repo).toBeInstanceOf(WorkerRepo)
   })
 })

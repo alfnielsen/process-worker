@@ -1,5 +1,4 @@
-import type { IRedisCacheEvent } from "../RedisHub/IRedisCacheEvent"
-import RedisHub from "../RedisHub/RedisHub"
+import { RedisHub } from "../RedisHub/RedisHub"
 import RedisRepo, { type EntityId } from "../RedisRepo/RedisRepo"
 import type { ILogObject, LogEventHandler, LogType } from "./ILogObject"
 
@@ -8,42 +7,53 @@ const debug = (...args: any[]) => {
   if (process.env.DEBUG) console.log(...args)
 }
 
+
+export const QUEUE_LOG_KEY = "logQueue"
+
 export type LogId = { id: string } | string
 
 export class LogRepo extends RedisRepo {
-  static override async createRepo(opt: {
+  static readonly colors = {
+    cyan: "\x1b[36m",
+    gray: "\x1b[90m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    red: "\x1b[31m",
+    magenta: "\x1b[35m",
+    blue: "\x1b[34m",
+    reset: "\x1b[0m",
+  } as const
+  logMessageToStdout: boolean = false
+  static async createLogger(opt: {
     prefix?: string,
-    baseKey?: string,
     queueKey?: string,
+    logMessageToStdout?: boolean,
   } = {}): Promise<LogRepo> {
     const hub = await RedisHub.createHub({ prefix: opt.prefix })
     const repo = new LogRepo(hub, opt)
     await repo.waitReady()
+    repo.logMessageToStdout = opt.logMessageToStdout || false
     return repo
   }
 
   constructor(hub: RedisHub, opt: {
     prefix?: string,
-    baseKey?: string,
     queueKey?: string,
   } = {}) {
-    super(hub, { baseKey: opt.baseKey || "logs", queueKey: opt.queueKey || "logQueue" })
+    super(hub, {  queueKey: opt.queueKey || QUEUE_LOG_KEY })
   }
 
-  getLogStoreKey(log: LogId, type: string = "log") {
-    const id = this.getLogId(log)
-    return `${this.baseKey}:${id}:${type}`
-  }
-  getLogQueueKey(log: LogId): string {
-    return `${this.queueKey}`
-  }
-  getLogId(log: LogId): string {
-    if (typeof log === "string") {
-      if (!log) throw new Error("Log ID cannot be an empty string")
-      return log
+  /**
+   * Creates a logging function with a specific title and color.
+   * @param title 
+   * @param color 
+   * @returns 
+   */
+  titleLogFunc(title: string, color: keyof typeof LogRepo.colors = "cyan"): (message: string, type?: LogType, data?: any, level?:string) => Promise<ILogObject> {
+    return async (message: string, type: LogType = "info", data?: any, level?:string): Promise<ILogObject> => {
+      const logMessage = `${LogRepo.colors[color]}[${title.trim()}]${LogRepo.colors.reset} ${message}`
+      return this.log(logMessage, type, data, level)
     }
-    if (!log.id) throw new Error("Log object must have an 'id' property")
-    return log.id
   }
 
   async log<TData = any>(message: string, type: LogType = "info", data?: TData, level?:string): Promise<ILogObject<TData>> {
@@ -55,31 +65,22 @@ export class LogRepo extends RedisRepo {
       data: data,
       timestamp: Date.now(),
     }
-    await this.saveLog(log)
+    if(this.logMessageToStdout) {
+      console.log(log.message)
+      //console.log(`[${log.level}] ${log.message}`, log.data)
+    }
+    await this.publishLog(log)
     return log
-
-  }
-  async saveLog<TData = any>(log: ILogObject<TData>): Promise<void> {
-    if (!log || !log.id) throw new Error("Log object must have an 'id' property")
-    const storeKey = this.getLogStoreKey(log)
-    await this.hub.setVal(storeKey, log)
-    await this.hub.publish(this.baseKey, log.type || "log", log)
   }
 
-  async publishLog<TData = any>(log: ILogObject<TData>, eventType: string, data: object): Promise<void> {
-    const id = this.getLogId(log)
-    if (!id) throw new Error("Log ID is required to publish an event")
-    const storeKey = this.getLogStoreKey(id, "events")
-    await this.hub.publish(storeKey, eventType, data)
-    await this.hub.publish(this.baseKey, eventType, { ...data, logId: id })
+  async publishLog<TData = any>(log: ILogObject<TData>): Promise<void> {
+    await this.hub.publish(this.queueKey,"log", log)
   }
 
-  listenToLogStream(eventListener: LogEventHandler): void {
-    const storeKey = this.baseKey
-    this.hub.listen(storeKey, async (event) => {
+  listenToLogStream(eventListener: LogEventHandler) {
+    return this.hub.listen(this.queueKey, async (event) => {
       const log = event.data as ILogObject
-      eventListener(log)
-      return true
+      eventListener(log)      
     })
   }
 

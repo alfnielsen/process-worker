@@ -14,17 +14,17 @@ const debug = (...args: any[]) => {
 describe("ActionHub", () => {
   afterAll(async () => {
     // Clean up test keys
-    const repo = await ActionRepo.createRepo({
+    const repo = await ActionRepo.createActionRepo({
       prefix,
     })
     await repo.hub.delKeys(`${repo.hub.prefix}*`, true)
   })
 
   it("should post and listen to a stream", async () => {
-    const repo = await ActionRepo.createRepo({
+    const repo = await ActionRepo.createActionRepo({
       prefix,
     })
-    const otherRepo = await ActionRepo.createRepo({
+    const otherRepo = await ActionRepo.createActionRepo({
       prefix,
     })
     repo.waitReady()
@@ -92,7 +92,7 @@ describe("ActionHub", () => {
     // listen to the request queue
     const got: IActionObjectAny[] = []
     // Use the same repo instance for both creating and listening
-    const sharedRepo = await ActionRepo.createRepo({ prefix })
+    const sharedRepo = await ActionRepo.createActionRepo({ prefix })
     sharedRepo.listenToRequestQueue(actObj => {
       expect(actObj).toHaveProperty("id")
       expect(actObj).toHaveProperty("name")

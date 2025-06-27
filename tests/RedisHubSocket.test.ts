@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test"
 import { sleep } from "bun"
 import { RedisHubSocket } from "../src/RedisHub/RedisHubSocket"
+import { RedisHub } from "../src"
 
 const PORT = 34567
 const WS_URL = `ws://localhost:${PORT}`
@@ -15,7 +16,8 @@ const debug = (...args: any[]) => {
 async function ensurePortFree(port: number): Promise<void> {
   const net = await import("net")
   await new Promise<void>((resolve, reject) => {
-    const tester = net.createServer()
+    const tester = net
+      .createServer()
       .once("error", (err: any) => {
         if (err.code === "EADDRINUSE") {
           debug(`[beforeAll] Port ${port} in use, attempting to close any existing server...`)
@@ -31,29 +33,35 @@ async function ensurePortFree(port: number): Promise<void> {
   })
 }
 
+let server: any
+
+beforeAll(async () => {
+  // Ensure the port is free before starting the server
+  try {
+    await ensurePortFree(PORT)
+    debug("[beforeAll] Port", PORT, "is free, proceeding to start WebSocket server.")
+  } catch (e) {
+    throw new Error(`Test setup failed: ${e}`)
+  }
+
+  const hubSocket = await RedisHubSocket.createHub({ prefix })
+  // Create a new RedisHub
+  server = await hubSocket.listen({ port: PORT })
+  await sleep(50)
+  debug("[beforeAll] WebSocket server started on port", PORT)
+})
+
+afterAll(async () => {
+  server?.stop?.()
+  await sleep(50)
+  debug("[afterAll] WebSocket server stopped")
+
+  // Clean up test keys
+  const redisHub = await RedisHub.createHub({ prefix })
+  await redisHub.delKeys(`${prefix}*`, true)
+})
+
 describe("RedisHubSocket WebSocket server", () => {
-  let server: any
-  beforeAll(async () => {
-    // Ensure the port is free before starting the server
-    try {
-      await ensurePortFree(PORT)
-      debug("[beforeAll] Port", PORT, "is free, proceeding to start WebSocket server.")
-    } catch (e) {
-      throw new Error(`Test setup failed: ${e}`)
-    }
-
-    const hubSocket = await RedisHubSocket.createHub({ prefix })
-    // Create a new RedisHub
-    server = await hubSocket.listen({ port: PORT })
-    await sleep(50)
-    debug("[beforeAll] WebSocket server started on port", PORT)
-  })
-  afterAll(async () => {
-    server?.stop?.()
-    await sleep(50)
-    debug("[afterAll] WebSocket server stopped")
-  })
-
   // Test: Subscribe to a stream and receive a published message
   it("should subscribe and receive published messages", async () => {
     const ws = new WebSocket(WS_URL)
@@ -74,7 +82,7 @@ describe("RedisHubSocket WebSocket server", () => {
           ws.send(JSON.stringify({ type: "publish", stream: "test-stream", eventType: "test", data: { foo: "bar" } }))
         }, 300)
       }
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         debug("[ws.onmessage] Received:", event.data)
         const msg = JSON.parse(event.data)
         // Match the actual message format from the server
@@ -88,7 +96,7 @@ describe("RedisHubSocket WebSocket server", () => {
           debug("[ws.onmessage] Ignored message:", msg)
         }
       }
-      ws.onerror = (err) => {
+      ws.onerror = err => {
         clearTimeout(timeout)
         ws.close()
         debug("[ws.onerror]", err)
@@ -115,7 +123,7 @@ describe("RedisHubSocket WebSocket server", () => {
         // Set value for key 'foo'
         ws.send(JSON.stringify({ type: "setVal", key: "foo", value: "bar" }))
       }
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         debug("[ws.onmessage] Received:", event.data)
         const msg = JSON.parse(event.data)
         if (stage === 0 && msg.ok) {
@@ -135,7 +143,7 @@ describe("RedisHubSocket WebSocket server", () => {
           resolve()
         }
       }
-      ws.onerror = (err) => {
+      ws.onerror = err => {
         clearTimeout(timeout)
         ws.close()
         debug("[ws.onerror]", err)
@@ -158,7 +166,7 @@ describe("RedisHubSocket WebSocket server", () => {
           ws.send(JSON.stringify({ type: "getStreamValues", stream: "stream-x" }))
         }, 50)
       }
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         debug("[ws.onmessage] Received:", event.data)
         const msg = JSON.parse(event.data)
         if (msg.values && Array.isArray(msg.values)) {
@@ -168,7 +176,7 @@ describe("RedisHubSocket WebSocket server", () => {
           resolve()
         }
       }
-      ws.onerror = (err) => {
+      ws.onerror = err => {
         debug("[ws.onerror]", err)
         reject(err)
       }

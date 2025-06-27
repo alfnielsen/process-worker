@@ -1,7 +1,8 @@
 import { describe, it, expect, afterAll } from "bun:test"
 import { sleep } from "bun"
-import WorkerRepo, { type IWorkerInfo, type WorkerStatus } from "../src/Worker/WorkerRepo"
+import WorkerRepo from "../src/Worker/WorkerRepo"
 import { Worker } from "../src/Worker/Worker"
+import type { IWorkerInfo } from "../src/client"
 
 const prefix = "__test__worker-repo__"
 
@@ -13,13 +14,13 @@ const debug = (...args: any[]) => {
 describe("WorkerRepo", () => {
   afterAll(async () => {
     // Clean up all test keys in Redis for this prefix after all tests
-    const repo = await WorkerRepo.createRepo({ prefix })
+    const repo = await WorkerRepo.startWorker({ prefix })
     await repo.hub.delKeys(`${repo.hub.prefix}*`, true)
   })
 
   it("should save and retrieve a worker", async () => {
     // Test saving a worker and retrieving it by ID
-    const repo = await WorkerRepo.createRepo({ prefix })
+    const repo = await WorkerRepo.startWorker({ prefix })
     const workerId = crypto.randomUUID() as string
     const info: IWorkerInfo = {
       id: workerId,
@@ -40,7 +41,7 @@ describe("WorkerRepo", () => {
 
   it("should update status and heartbeat", async () => {
     // Test updating a worker's status and heartbeat (lastSeen)
-    const repo = await WorkerRepo.createRepo({ prefix })
+    const repo = await WorkerRepo.startWorker({ prefix })
     const workerId = crypto.randomUUID() as string
     const info: IWorkerInfo = {
       id: workerId,
@@ -62,7 +63,7 @@ describe("WorkerRepo", () => {
 
   it("should list all workers", async () => {
     // Test listing multiple workers after saving them
-    const repo = await WorkerRepo.createRepo({ prefix })
+    const repo = await WorkerRepo.startWorker({ prefix })
     // Add two workers
     const w1 = new Worker({ id: crypto.randomUUID() as string, name: "w1", status: "idle", lastSeen: Date.now() }, i => repo.saveWorker(i))
     const w2 = new Worker({ id: crypto.randomUUID() as string, name: "w2", status: "busy", lastSeen: Date.now() }, i => repo.saveWorker(i))
@@ -76,7 +77,7 @@ describe("WorkerRepo", () => {
 
   it("should get all workers as Worker instances", async () => {
     // Test retrieving all workers as Worker class instances
-    const repo = await WorkerRepo.createRepo({ prefix })
+    const repo = await WorkerRepo.startWorker({ prefix })
     // Add two workers
     const w1 = new Worker({ id: crypto.randomUUID() as string, name: "w1", status: "idle", lastSeen: Date.now() }, i => repo.saveWorker(i))
     const w2 = new Worker({ id: crypto.randomUUID() as string, name: "w2", status: "busy", lastSeen: Date.now() }, i => repo.saveWorker(i))

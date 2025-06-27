@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll, beforeAll } from "bun:test"
-import RedisHub from "../src/RedisHub/RedisHub"
+import {RedisHub} from "../src/RedisHub/RedisHub"
 import { sleep } from "bun"
 
 const prefix = "__test__redis-hub__"
@@ -58,6 +58,9 @@ describe("RedisHub", () => {
     await redisHub.publish("test-stream", "test-type", { foo: "bar" })
     await sleep(100)
     expect(got.length).toBeGreaterThan(0)
+    await redisHub.publish("test-stream", "test-type", { foo: "baz" })
+    await sleep(100)
+    expect(got.length).toBeGreaterThan(1)
     const msg = got[0]
      console.log("Received message[0]:", msg)
     expect(msg).toHaveProperty("id")

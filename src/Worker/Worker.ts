@@ -1,4 +1,4 @@
-import type { WorkerStatus, IWorkerInfo } from "./WorkerRepo"
+import type { IWorkerInfo, WorkerStatus } from "./IWorkerInfo"
 
 /**
  * Worker: Represents a worker instance with methods to update and persist its state.

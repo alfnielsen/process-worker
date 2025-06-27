@@ -1,5 +1,5 @@
 import type { IWebSocketMessage } from "./IWebSocketMessage"
-import RedisHub from "./RedisHub"
+import {RedisHub} from "./RedisHub"
 
 // Debug utility
 const debug = (...args: any[]) => {
