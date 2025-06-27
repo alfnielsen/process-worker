@@ -20,7 +20,7 @@ export class LogRepo extends RedisRepo {
     yellow: "\x1b[33m",
     red: "\x1b[31m",
     magenta: "\x1b[35m",
-    blue: "\x1b[34m",
+    blue: "\x1b[34m",    
     reset: "\x1b[0m",
   } as const
   logMessageToStdout: boolean = false

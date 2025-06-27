@@ -2,7 +2,7 @@ import { watch } from "fs";
 import { join } from "path";
 import { hub, config, logger } from "./app-config";
 
-const log = logger.titleLogFunc("watch-worker", "gray");
+const log = logger.titleLogFunc("watch-worker", "blue");
 
 log(`Watch worker started`)
 log(`Watching directory ${config.path}`, config.path)
@@ -18,7 +18,7 @@ watch(config.path, { recursive: true }, (eventType, filename) => {
     return
   }
   // Log the file change event
-  log(`[watch-worker] File change detected: ${eventType} on ${filename}`, "info", {
+  log(`File change detected: ${eventType} on ${filename}`, "info", {
     eventType,
     filename,
   })

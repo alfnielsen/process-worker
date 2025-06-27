@@ -6,7 +6,7 @@ import { join } from "path";
 const c = LogRepo.colors
 // Dummy script that change the test-file to trigger the file watcher
 // Create a logger for the worker
-const log =  logger.titleLogFunc("change-file-worker", "green")
+const log =  logger.titleLogFunc("change-file-worker", "yellow")
 await log("Test fiel change worker started", "info")
 
 await sleep(1000) // Wait for the logger to be ready

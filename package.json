@@ -1,15 +1,16 @@
 {
   "name": "redis-process-worker",
   "description": "A worker process helper for using redis cache and streams.",
-  "version": "0.0.2002-beta",
+  "version": "0.0.2004-beta",
   "module": "src/ProcessWorker.ts",
   "main": "dist/ProcessWorker.js",
   "types": "dist/types/index.d.ts",
   "type": "module",
   "scripts": {
     "dev:patch": "bun run ./dev-scripts/use-patch-in-example.worker.ts",
-    "build": "bun run build:main && bun run build:declaration",
-    "build:main": "bun build ./src/*.ts ./src/**/*.ts --outdir dist --external=ioredis --target node",
+    "build": "bun run build:server && bun run build:client && bun run build:declaration",
+    "build:server": "bun build ./src/index.ts --outdir dist --external=ioredis --target node",
+    "build:client": "bun build ./src/client.ts --outdir dist --target browser",
     "build:declaration": "tsc --emitDeclarationOnly --declaration --declarationMap --project tsconfig.types.json",
     "pub:beta": "npm publish --tag beta",
     "pub": "npm publish"

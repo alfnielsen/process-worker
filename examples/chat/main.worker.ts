@@ -1,6 +1,6 @@
 import { $ } from "bun";
 import { LogRepo } from "../../src";
-import { config, logger } from "./app-config";
+import { logger , config } from "./app-server-config";
 
 const c = LogRepo.colors
 console.clear() // Main worker - clear the console
@@ -10,14 +10,9 @@ const log =  logger.titleLogFunc("main-worker", "green")
 await log("Logger worker started", "info")
 
 const workers = [ 
-  "change-file.worker.ts",
+  "server.worker.ts",
   // app-config.ts
-  "file-watch.worker.ts",
-  "log-viewer.worker.ts",
-  // main.worker.ts
-  "react-to-change.worker.ts",
-  // README.md
-  // test-file.ts
+  "client.worker.ts",
 ]
 
 for (const worker of workers) {

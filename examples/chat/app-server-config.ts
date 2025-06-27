@@ -1,7 +1,8 @@
 import { LogRepo, RedisHub } from "../../src"
+import { config as _config } from "./app-config"
 
 const config = {
-  appPrefix: "__file-watcher-example__",
+  ..._config,
   path: import.meta.dirname, // this directory!
   logMessageToStdout: true,
 } as const

@@ -4,4 +4,5 @@ export * from "./Action/IActionRequest";
 export * from "./RedisHub/IRedisCacheEvent";
 export * from "./RedisHub/IWebSocketMessage";
 export * from "./Worker/IWorkerInfo";
+export * from "./RedisHub/RedisHubSocketClient";
 
