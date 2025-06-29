@@ -48,7 +48,7 @@ describe("ActionHub", () => {
     })
     // Wait for the action to be available in Redis
     let _act1: ActionRequest | undefined = undefined
-    const storeKey = repo.getActionStoreKey(actId)
+    const storeKey = repo.getStoreKey(actId)
     const rawRepoVal = await repo.hub.redis.get(storeKey)
     const rawOtherRepoVal = await otherRepo.hub.redis.get(storeKey)
     debug(`[DEBUG] Direct redis.get from repo:`, rawRepoVal)

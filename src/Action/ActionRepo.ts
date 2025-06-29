@@ -25,18 +25,7 @@ export class ActionRepo extends RedisRepo {
     super(hub, opt)
   }
 
-  // Redis keys for action data
-  getActionStoreKey(action: EntityId, type: string = "request") {
-    const id = this.getEntityId(action)
-    const key = `${this.baseKey}:${id}:${type}`
-    //console.log(`[ActionRepo.getActionStoreKey] id: ${id}, type: ${type}, key: ${key}`)
-    return key
-  }
-   getActionRequestQueueKey(action: EntityId): string {
-    const id = this.getEntityId(action)
-    return `${this.queueKey}`
-    //return `${this.queueKey}:${id}`
-  }
+
   
   create<
     TArg extends object,
@@ -128,7 +117,7 @@ export class ActionRepo extends RedisRepo {
     TError extends object | undefined = undefined,
     TOutput extends object | undefined = undefined,
   >(id: EntityId, restore = false): Promise<ActionRequest<TArg, TData, TError, TOutput> | undefined> {
-    const storeKey = this.getActionStoreKey(id)
+    const storeKey = this.getStoreKey(id)
     debug(`[ActionRepo.loadAction] storeKey: ${storeKey}`)
     const directVal = await this.hub.redis.get(storeKey)
     debug(`[ActionRepo.loadAction] direct redis.get: ${directVal}`)
@@ -155,7 +144,7 @@ export class ActionRepo extends RedisRepo {
     if (!action || !action.id) {
       throw new Error("Action object must have an 'id' property")
     }
-    const storeKey = this.getActionStoreKey(action)
+    const storeKey = this.getStoreKey(action)
     debug(`[ActionRepo.saveAction] storeKey: ${storeKey}`)
     const serialized = JSON.stringify(action.jsonWithEvents)
     debug(`[ActionRepo.saveAction] serialized: ${serialized}`)
@@ -177,7 +166,7 @@ export class ActionRepo extends RedisRepo {
     if (!id) {
       throw new Error("Action ID is required to publish an event")
     }
-    const storeKey = this.getActionStoreKey(id, "events")
+    const storeKey = this.getStoreKey(id, "events")
     await this.hub.publish(storeKey, eventType, data)
   }
 
@@ -219,18 +208,18 @@ export class ActionRepo extends RedisRepo {
   }
 
    listen(action: EntityId, eventListener: ActionEventHandler): void {
-    const storeKey = this.getActionStoreKey(action, "events")
+    const storeKey = this.getStoreKey(action, "events")
     this.hub.listen(storeKey, eventListener)
   }
 
    async getVal<T>(action: EntityId, type: string): Promise<T | undefined> {
-    const storeKey = this.getActionStoreKey(action, type)
+    const storeKey = this.getStoreKey(action, type)
     const value = await this.hub.getVal<T>(storeKey)
     return value
   }
 
    async setVal(action: EntityId, type: string, value: any): Promise<void> {
-    const storeKey = this.getActionStoreKey(action, type)
+    const storeKey = this.getStoreKey(action, type)
     await this.hub.setVal(storeKey, value)
   }
 }

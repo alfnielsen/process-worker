@@ -68,7 +68,21 @@ export class RedisRepo {
     }
     return entity.id
   }
-
+  
+    // Redis keys for action data
+    getStoreKey(action: EntityId, type: string = "data"): string {
+      const id = this.getEntityId(action)
+      const key = `${this.baseKey}:${id}:${type}`
+      //console.log(`[ActionRepo.getActionStoreKey] id: ${id}, type: ${type}, key: ${key}`)
+      return key
+    }
+    
+     getQueueKey(action: EntityId): string {
+      const id = this.getEntityId(action)
+      return `${this.queueKey}`
+      //return `${this.queueKey}:${id}`
+     }
+  
   /**
    * Wait for the underlying RedisHub to be ready.
    */
