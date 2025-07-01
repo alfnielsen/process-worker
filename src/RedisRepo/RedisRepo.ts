@@ -9,7 +9,7 @@ export type EntityId = { id: string } | string
  */
 export class RedisRepo {
   hub: RedisHub // The RedisHub instance used for Redis operations
-  baseKey: string // The base key for storing entities
+  storeKey: string // The base key for storing entities
   queueKey: string // The key for the entity queue
 
   /**
@@ -44,11 +44,11 @@ export class RedisRepo {
    */
   constructor(redisHub:RedisHub, opt: {
     prefix?: string,
-    baseKey?: string,
+    storeKey?: string,
     queueKey?: string,
   } = {}) {
     this.hub = redisHub
-    this.baseKey = opt.baseKey || "entities"
+    this.storeKey = opt.storeKey || "entities"
     this.queueKey = opt.queueKey || "entityQueue"
   }
 
@@ -72,7 +72,7 @@ export class RedisRepo {
     // Redis keys for action data
     getStoreKey(action: EntityId, type: string = "data"): string {
       const id = this.getEntityId(action)
-      const key = `${this.baseKey}:${id}:${type}`
+      const key = `${this.storeKey}:${id}:${type}`
       //console.log(`[ActionRepo.getActionStoreKey] id: ${id}, type: ${type}, key: ${key}`)
       return key
     }
@@ -91,4 +91,3 @@ export class RedisRepo {
   }
 }
 
-export default RedisRepo

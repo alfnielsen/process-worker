@@ -1,5 +1,4 @@
 import { RedisHub } from "../RedisHub/RedisHub"
-import {RedisRepo,  type EntityId } from "../RedisRepo/RedisRepo"
 import type { ILogObject, LogEventHandler, LogType } from "./ILogObject"
 
 // Debug utility
@@ -8,11 +7,20 @@ const debug = (...args: any[]) => {
 }
 
 
-export const QUEUE_LOG_KEY = "logQueue"
+export const LOG_STORE_KEY = "logs" // Base key for log data
+export const QUEUE_LOG_KEY = "logs"
+
 
 export type LogId = { id: string } | string
 
-export class LogRepo extends RedisRepo {
+export class Logger {
+  static readonly LOG_STORE_KEY = LOG_STORE_KEY
+  static readonly QUEUE_LOG_KEY = QUEUE_LOG_KEY
+  logMessageToStdout: boolean = false
+  hub: RedisHub
+  storeKey: string
+  queueKey: string  
+  
   static readonly colors = {
     cyan: "\x1b[36m",
     gray: "\x1b[90m",
@@ -23,24 +31,34 @@ export class LogRepo extends RedisRepo {
     blue: "\x1b[34m",    
     reset: "\x1b[0m",
   } as const
-  logMessageToStdout: boolean = false
+
   static async createLogger(opt: {
     prefix?: string,
     queueKey?: string,
     logMessageToStdout?: boolean,
-  } = {}): Promise<LogRepo> {
+  } = {}): Promise<Logger> {
     const hub = await RedisHub.createHub({ prefix: opt.prefix })
-    const repo = new LogRepo(hub, opt)
-    await repo.waitReady()
+    const repo = new Logger({
+      hub: hub,
+      storeKey: LOG_STORE_KEY,
+      queueKey: opt.queueKey || QUEUE_LOG_KEY,
+    })
+    await hub.waitReady()
     repo.logMessageToStdout = opt.logMessageToStdout || false
     return repo
   }
 
-  constructor(hub: RedisHub, opt: {
-    prefix?: string,
+  constructor(opt: {
+    hub: RedisHub,
+    storeKey?: string,
     queueKey?: string,
-  } = {}) {
-    super(hub, {  queueKey: opt.queueKey || QUEUE_LOG_KEY })
+    logMessageToStdout?: boolean,
+  }) {
+    this.hub = opt.hub
+    this.storeKey = opt.storeKey || `${opt.hub.prefix}:${LOG_STORE_KEY}`
+    this.queueKey = opt.queueKey || `${opt.hub.prefix}:${QUEUE_LOG_KEY}`
+    this.logMessageToStdout = opt.logMessageToStdout || false
+    debug(`[Logger] Initialized with storeKey: ${this.storeKey}, queueKey: ${this.queueKey}`)
   }
 
   /**
@@ -49,9 +67,9 @@ export class LogRepo extends RedisRepo {
    * @param color 
    * @returns 
    */
-  titleLogFunc(title: string, color: keyof typeof LogRepo.colors = "cyan"): (message: string, type?: LogType, data?: any, level?:string) => Promise<ILogObject> {
+  titleLogFunc(title: string, color: keyof typeof Logger.colors = "cyan"): (message: string, type?: LogType, data?: any, level?:string) => Promise<ILogObject> {
     return async (message: string, type: LogType = "info", data?: any, level?:string): Promise<ILogObject> => {
-      const logMessage = `${LogRepo.colors[color]}[${title.trim()}]${LogRepo.colors.reset} ${message}`
+      const logMessage = `${Logger.colors[color]}[${title.trim()}]${Logger.colors.reset} ${message}`
       return this.log(logMessage, type, data, level)
     }
   }

@@ -1,5 +1,5 @@
 import {RedisHub} from "../RedisHub/RedisHub"
-import RedisRepo, { type EntityId } from "../RedisRepo/RedisRepo"
+import  {RedisRepo, type EntityId } from "../RedisRepo/RedisRepo"
 import { Worker } from "./Worker"
 import type { WorkerStatus, IWorkerInfo } from "./IWorkerInfo"
 
@@ -23,12 +23,12 @@ export class WorkerRepo extends RedisRepo {
     baseKey?: string,
   } = {}) {
     // Default baseKey to 'worker' if not provided
-    super(hub, { ...opt, baseKey: opt.baseKey || "worker" })
+    super(hub, { ...opt, storeKey: opt.baseKey || "worker" })
   }
 
   getWorkerKey(workerId: EntityId): string {
     const id = this.getEntityId(workerId)
-    return `${this.baseKey}:worker:${id}`
+    return `${this.storeKey}:worker:${id}`
   }
 
   async saveWorker(info: IWorkerInfo): Promise<void> {
@@ -84,4 +84,3 @@ export class WorkerRepo extends RedisRepo {
   }
 }
 
-export default WorkerRepo

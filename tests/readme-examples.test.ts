@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test"
-import ActionRepo from "../src/Action/ActionRepo"
-import LogRepo from "../src/Log/LogRepo"
+import {ActionRepo} from "../src/Action/ActionRepo"
+import {LogRepo} from "../src/Log/LogRepo"
 import {RedisHub} from "../src/RedisHub/RedisHub"
-import RedisRepo from "../src/RedisRepo/RedisRepo"
-import WorkerRepo from "../src/Worker/WorkerRepo"
+import {RedisRepo} from "../src/RedisRepo/RedisRepo"
+import {WorkerRepo} from "../src/Worker/WorkerRepo"
 
 // Note: These are illustrative tests matching the README examples. Adjust as needed for your actual API and test environment.
 

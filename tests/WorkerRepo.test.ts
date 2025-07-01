@@ -1,6 +1,6 @@
 import { describe, it, expect, afterAll } from "bun:test"
 import { sleep } from "bun"
-import WorkerRepo from "../src/Worker/WorkerRepo"
+import {WorkerRepo} from "../src/Worker/WorkerRepo"
 import { Worker } from "../src/Worker/Worker"
 import type { IWorkerInfo } from "../src/client"
 
